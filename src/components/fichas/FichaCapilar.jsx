@@ -1,18 +1,22 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { GaleriaFotos } from '../GaleriaFotos';
+import { gerarTextoClinico } from '../../lib/geracaoTexto';
 
 const VAZIO = {
   tipo_queda: '', classificacao: '', ferro: '', ferritina: '',
   vitamina_d: '', tsh: '', protocolo: '', data_sessao: '', observacoes: '',
+  laudo: '', receituario: '',
 };
 
-export function FichaCapilar({ pacienteId }) {
+export function FichaCapilar({ pacienteId, pacienteNome }) {
   const [registros, setRegistros] = useState([]);
   const [form, setForm] = useState(VAZIO);
   const [mostrarForm, setMostrarForm] = useState(false);
   const [editandoId, setEditandoId] = useState(null);
   const [salvando, setSalvando] = useState(false);
+  const [gerandoLaudo, setGerandoLaudo] = useState(false);
+  const [gerandoReceituario, setGerandoReceituario] = useState(false);
 
   async function carregar() {
     const { data } = await supabase
@@ -42,6 +46,8 @@ export function FichaCapilar({ pacienteId }) {
       protocolo: r.protocolo || '',
       data_sessao: r.data_sessao || '',
       observacoes: r.observacoes || '',
+      laudo: r.laudo || '',
+      receituario: r.receituario || '',
     });
     setEditandoId(r.id);
     setMostrarForm(true);
@@ -51,6 +57,51 @@ export function FichaCapilar({ pacienteId }) {
     if (!confirm('Excluir este registro?')) return;
     await supabase.from('fichas_capilar').delete().eq('id', id);
     carregar();
+  }
+
+  async function gerarLaudo() {
+    setGerandoLaudo(true);
+    try {
+      const texto = await gerarTextoClinico({
+        tipo: 'laudo',
+        servico: 'capilar',
+        pacienteNome,
+        dados: {
+          'Tipo de queda': form.tipo_queda,
+          'Classificação': form.classificacao,
+          'Ferro': form.ferro,
+          'Ferritina': form.ferritina,
+          'Vitamina D': form.vitamina_d,
+          'TSH': form.tsh,
+          'Protocolo': form.protocolo,
+          'Observações': form.observacoes,
+        },
+      });
+      setForm((f) => ({ ...f, laudo: texto }));
+    } catch (err) {
+      alert('Erro ao gerar laudo: ' + err.message);
+    }
+    setGerandoLaudo(false);
+  }
+
+  async function gerarReceituario() {
+    setGerandoReceituario(true);
+    try {
+      const texto = await gerarTextoClinico({
+        tipo: 'receituario',
+        servico: 'capilar',
+        pacienteNome,
+        dados: {
+          'Tipo de queda': form.tipo_queda,
+          'Protocolo': form.protocolo,
+          'Observações': form.observacoes,
+        },
+      });
+      setForm((f) => ({ ...f, receituario: texto }));
+    } catch (err) {
+      alert('Erro ao gerar receituário: ' + err.message);
+    }
+    setGerandoReceituario(false);
   }
 
   async function salvar(e) {
@@ -127,6 +178,27 @@ export function FichaCapilar({ pacienteId }) {
               <label>Observações</label>
               <input value={form.observacoes} onChange={(e) => setForm({ ...form, observacoes: e.target.value })} />
             </div>
+
+            <div className="campo">
+              <div className="campo-cabecalho">
+                <label>Laudo</label>
+                <button type="button" className="botao-secundario" onClick={gerarLaudo} disabled={gerandoLaudo}>
+                  {gerandoLaudo ? 'Gerando...' : '✨ Gerar automaticamente'}
+                </button>
+              </div>
+              <textarea rows={6} value={form.laudo} onChange={(e) => setForm({ ...form, laudo: e.target.value })} placeholder="Preencha os dados acima e clique em 'Gerar automaticamente', ou escreva manualmente." />
+            </div>
+
+            <div className="campo">
+              <div className="campo-cabecalho">
+                <label>Receituário</label>
+                <button type="button" className="botao-secundario" onClick={gerarReceituario} disabled={gerandoReceituario}>
+                  {gerandoReceituario ? 'Gerando...' : '✨ Gerar automaticamente'}
+                </button>
+              </div>
+              <textarea rows={6} value={form.receituario} onChange={(e) => setForm({ ...form, receituario: e.target.value })} placeholder="Preencha os dados acima e clique em 'Gerar automaticamente', ou escreva manualmente." />
+            </div>
+
             <div className="ficha-form-acoes">
               <button type="submit" className="botao" disabled={salvando} style={{ maxWidth: 220 }}>
                 {salvando ? 'Salvando...' : editandoId ? 'Salvar alterações' : 'Salvar registro'}
@@ -161,6 +233,8 @@ export function FichaCapilar({ pacienteId }) {
                 </p>
               )}
               {r.observacoes && <p>{r.observacoes}</p>}
+              {r.laudo && <p><strong>Laudo:</strong> {r.laudo}</p>}
+              {r.receituario && <p><strong>Receituário:</strong> {r.receituario}</p>}
             </div>
           ))}
         </div>

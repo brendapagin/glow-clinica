@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { GaleriaFotos } from '../GaleriaFotos';
+import { gerarTextoClinico } from '../../lib/geracaoTexto';
 
 const APLICACAO_VAZIA = {
   area_tratada: '', produto_id: '', quantidade_ml: '', unidade: 'ml', lote: '', validade: '', especificacao: '',
@@ -8,6 +9,7 @@ const APLICACAO_VAZIA = {
 const FORM_VAZIO = {
   data_aplicacao: '', data_retorno: '', observacoes: '',
   composicao_id: '', custo_operacional: '', valor_cobrado: '',
+  laudo: '', receituario: '',
   aplicacoes: [{ ...APLICACAO_VAZIA }],
 };
 
@@ -44,7 +46,7 @@ function calcularTotalComposicao(linhas, valorBase) {
   }, 0);
 }
 
-export function FichaHarmonizacao({ pacienteId }) {
+export function FichaHarmonizacao({ pacienteId, pacienteNome }) {
   const [procedimentos, setProcedimentos] = useState([]);
   const [produtos, setProdutos] = useState([]);
   const [composicoes, setComposicoes] = useState([]);
@@ -52,6 +54,8 @@ export function FichaHarmonizacao({ pacienteId }) {
   const [mostrarForm, setMostrarForm] = useState(false);
   const [editandoId, setEditandoId] = useState(null);
   const [salvando, setSalvando] = useState(false);
+  const [gerandoLaudo, setGerandoLaudo] = useState(false);
+  const [gerandoReceituario, setGerandoReceituario] = useState(false);
 
   async function carregar() {
     const { data: procs } = await supabase
@@ -117,6 +121,8 @@ export function FichaHarmonizacao({ pacienteId }) {
       composicao_id: proc.composicao_id || '',
       custo_operacional: proc.custo_operacional ?? '',
       valor_cobrado: proc.valor_cobrado ?? '',
+      laudo: proc.laudo || '',
+      receituario: proc.receituario || '',
       aplicacoes: (proc.harmonizacao_aplicacoes || []).length > 0
         ? proc.harmonizacao_aplicacoes.map((a) => ({
             area_tratada: a.area_tratada || '',
@@ -164,6 +170,57 @@ export function FichaHarmonizacao({ pacienteId }) {
     }
   }
 
+  function resumoAplicacoes() {
+    return form.aplicacoes
+      .filter((a) => a.area_tratada || a.produto_id)
+      .map((a) => {
+        const produto = produtos.find((p) => p.id === a.produto_id);
+        return `${a.area_tratada || 'área não informada'} — ${produto?.nome || 'produto não informado'}${a.quantidade_ml ? `, ${a.quantidade_ml}${a.unidade}` : ''}`;
+      })
+      .join('; ');
+  }
+
+  async function gerarLaudo() {
+    setGerandoLaudo(true);
+    try {
+      const texto = await gerarTextoClinico({
+        tipo: 'laudo',
+        servico: 'harmonizacao',
+        pacienteNome,
+        dados: {
+          'Aplicações realizadas': resumoAplicacoes(),
+          'Data da aplicação': form.data_aplicacao,
+          'Retorno previsto': form.data_retorno,
+          'Observações': form.observacoes,
+        },
+      });
+      setForm((f) => ({ ...f, laudo: texto }));
+    } catch (err) {
+      alert('Erro ao gerar laudo: ' + err.message);
+    }
+    setGerandoLaudo(false);
+  }
+
+  async function gerarReceituario() {
+    setGerandoReceituario(true);
+    try {
+      const texto = await gerarTextoClinico({
+        tipo: 'receituario',
+        servico: 'harmonizacao',
+        pacienteNome,
+        dados: {
+          'Aplicações realizadas': resumoAplicacoes(),
+          'Retorno previsto': form.data_retorno,
+          'Observações': form.observacoes,
+        },
+      });
+      setForm((f) => ({ ...f, receituario: texto }));
+    } catch (err) {
+      alert('Erro ao gerar receituário: ' + err.message);
+    }
+    setGerandoReceituario(false);
+  }
+
   async function salvar(e) {
     e.preventDefault();
     setSalvando(true);
@@ -176,6 +233,8 @@ export function FichaHarmonizacao({ pacienteId }) {
       composicao_id: form.composicao_id || null,
       custo_operacional: form.custo_operacional || null,
       valor_cobrado: form.valor_cobrado || null,
+      laudo: form.laudo,
+      receituario: form.receituario,
     };
 
     let procedimentoId = editandoId;
@@ -334,6 +393,26 @@ export function FichaHarmonizacao({ pacienteId }) {
               <input value={form.observacoes} onChange={(e) => setForm({ ...form, observacoes: e.target.value })} />
             </div>
 
+            <div className="campo">
+              <div className="campo-cabecalho">
+                <label>Laudo</label>
+                <button type="button" className="botao-secundario" onClick={gerarLaudo} disabled={gerandoLaudo}>
+                  {gerandoLaudo ? 'Gerando...' : '✨ Gerar automaticamente'}
+                </button>
+              </div>
+              <textarea rows={6} value={form.laudo} onChange={(e) => setForm({ ...form, laudo: e.target.value })} placeholder="Preencha as aplicações acima e clique em 'Gerar automaticamente', ou escreva manualmente." />
+            </div>
+
+            <div className="campo">
+              <div className="campo-cabecalho">
+                <label>Receituário</label>
+                <button type="button" className="botao-secundario" onClick={gerarReceituario} disabled={gerandoReceituario}>
+                  {gerandoReceituario ? 'Gerando...' : '✨ Gerar automaticamente'}
+                </button>
+              </div>
+              <textarea rows={6} value={form.receituario} onChange={(e) => setForm({ ...form, receituario: e.target.value })} placeholder="Preencha as aplicações acima e clique em 'Gerar automaticamente', ou escreva manualmente." />
+            </div>
+
             <div className="ficha-form-acoes">
               <button type="submit" className="botao" disabled={salvando} style={{ maxWidth: 220 }}>
                 {salvando ? 'Salvando...' : editandoId ? 'Salvar alterações' : 'Salvar atendimento'}
@@ -385,6 +464,8 @@ export function FichaHarmonizacao({ pacienteId }) {
               })()}
               {proc.data_retorno && <p>Retorno previsto: {new Date(proc.data_retorno).toLocaleDateString('pt-BR')}</p>}
               {proc.observacoes && <p>{proc.observacoes}</p>}
+              {proc.laudo && <p><strong>Laudo:</strong> {proc.laudo}</p>}
+              {proc.receituario && <p><strong>Receituário:</strong> {proc.receituario}</p>}
             </div>
           ))}
         </div>
