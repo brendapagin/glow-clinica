@@ -8,8 +8,6 @@ import Servicos from './pages/Servicos';
 import Produtos from './pages/Produtos';
 import { Protegida } from './components/RotaProtegida';
 
-const EQUIPE = ['admin', 'recepcao', 'profissional'];
-
 export default function App() {
   return (
     <Routes>
@@ -18,7 +16,7 @@ export default function App() {
       <Route
         path="/usuarios"
         element={
-          <Protegida papeisPermitidos={['admin']}>
+          <Protegida telaRequerida="usuarios">
             <Usuarios />
           </Protegida>
         }
@@ -26,7 +24,7 @@ export default function App() {
       <Route
         path="/pacientes"
         element={
-          <Protegida papeisPermitidos={EQUIPE}>
+          <Protegida telaRequerida="pacientes">
             <Pacientes />
           </Protegida>
         }
@@ -34,7 +32,7 @@ export default function App() {
       <Route
         path="/pacientes/:id"
         element={
-          <Protegida papeisPermitidos={EQUIPE}>
+          <Protegida telaRequerida="pacientes">
             <PacienteFicha />
           </Protegida>
         }
@@ -42,7 +40,7 @@ export default function App() {
       <Route
         path="/servicos"
         element={
-          <Protegida papeisPermitidos={['admin']}>
+          <Protegida telaRequerida="servicos">
             <Servicos />
           </Protegida>
         }
@@ -50,7 +48,7 @@ export default function App() {
       <Route
         path="/produtos"
         element={
-          <Protegida papeisPermitidos={['admin', 'profissional']}>
+          <Protegida telaRequerida="produtos">
             <Produtos />
           </Protegida>
         }

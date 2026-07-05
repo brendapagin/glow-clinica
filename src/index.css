@@ -367,6 +367,20 @@ select.select-papel { font-family: var(--fonte-corpo); padding: 6px; border: 1px
 
 .galeria-vazio { color: var(--terracota-escuro); font-size: 15px; }
 
+/* ---------- Permissões por tela ---------- */
+.checkboxes-telas { display: flex; flex-wrap: wrap; gap: 10px 16px; margin-top: 4px; }
+.checkbox-tela { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--marrom-tinta); cursor: pointer; white-space: nowrap; }
+.checkbox-tela input { width: auto; }
+.acesso-full { font-size: 13px; color: var(--sucesso); font-style: italic; }
+
+/* ---------- Campo composto (quantidade + unidade) ---------- */
+.campo-composto { display: flex; gap: 10px; align-items: flex-end; }
+.campo-composto input { flex: 1; }
+.campo-composto select { width: 78px; flex-shrink: 0; }
+
+/* ---------- Ações em tabela ---------- */
+.celula-acoes { display: flex; gap: 8px; }
+
 .galeria-fotos { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
 .galeria-coluna { }
 .galeria-cabecalho { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
