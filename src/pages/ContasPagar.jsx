@@ -2,11 +2,17 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { Layout } from '../components/Layout';
 
-const VAZIO = { descricao: '', valor: '', vencimento: '' };
+const VAZIO = { descricao: '', valor: '', vencimento: '', parcelado: false, numeroParcelas: 2 };
 
 function formatarMoeda(valor) {
   if (valor === null || valor === undefined || isNaN(valor)) return '—';
   return Number(valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 2 });
+}
+
+function somarMeses(dataIso, meses) {
+  const data = new Date(dataIso + 'T00:00:00');
+  data.setMonth(data.getMonth() + meses);
+  return data.toISOString().slice(0, 10);
 }
 
 export default function ContasPagar() {
@@ -42,6 +48,27 @@ export default function ContasPagar() {
   async function salvar(e) {
     e.preventDefault();
     setSalvando(true);
+
+    if (!editandoId && form.parcelado && form.numeroParcelas > 1) {
+      const grupoId = crypto.randomUUID();
+      const total = Number(form.numeroParcelas);
+      const linhas = Array.from({ length: total }, (_, i) => ({
+        descricao: `${form.descricao} (${i + 1}/${total})`,
+        valor: form.valor || 0,
+        vencimento: form.vencimento ? somarMeses(form.vencimento, i) : null,
+        grupo_parcelamento: grupoId,
+        parcela_numero: i + 1,
+        parcela_total: total,
+      }));
+      const { error } = await supabase.from('contas_pagar').insert(linhas);
+      setSalvando(false);
+      if (error) { alert('Erro ao salvar parcelas: ' + error.message); return; }
+      setForm(VAZIO);
+      setMostrarForm(false);
+      carregar();
+      return;
+    }
+
     const dados = { descricao: form.descricao, valor: form.valor || 0, vencimento: form.vencimento || null };
     const { error } = editandoId
       ? await supabase.from('contas_pagar').update(dados).eq('id', editandoId)
@@ -92,14 +119,30 @@ export default function ContasPagar() {
               <input required value={form.descricao} onChange={(e) => setForm({ ...form, descricao: e.target.value })} placeholder="Ex: Aluguel, fornecedor X..." />
             </div>
             <div className="campo">
-              <label>Valor (R$)</label>
+              <label>{form.parcelado ? 'Valor de cada parcela (R$)' : 'Valor (R$)'}</label>
               <input required type="number" step="0.01" value={form.valor} onChange={(e) => setForm({ ...form, valor: e.target.value })} />
             </div>
             <div className="campo">
-              <label>Vencimento</label>
+              <label>{form.parcelado ? 'Vencimento da 1ª parcela' : 'Vencimento'}</label>
               <input type="date" value={form.vencimento} onChange={(e) => setForm({ ...form, vencimento: e.target.value })} />
             </div>
           </div>
+
+          {!editandoId && (
+            <div className="campo">
+              <label className="checkbox-tela" style={{ fontSize: 14 }}>
+                <input type="checkbox" checked={form.parcelado} onChange={(e) => setForm({ ...form, parcelado: e.target.checked })} />
+                Comprei parcelado (gerar várias contas automaticamente)
+              </label>
+              {form.parcelado && (
+                <div style={{ marginTop: 14, maxWidth: 200 }}>
+                  <label>Número de parcelas</label>
+                  <input type="number" min="2" step="1" value={form.numeroParcelas} onChange={(e) => setForm({ ...form, numeroParcelas: e.target.value })} />
+                  <p className="dica-texto">Gera {form.numeroParcelas || 0} contas, uma por mês, cada uma com o valor informado acima.</p>
+                </div>
+              )}
+            </div>
+          )}
           <div className="ficha-form-acoes">
             <button type="submit" className="botao" disabled={salvando} style={{ maxWidth: 220 }}>
               {salvando ? 'Salvando...' : editandoId ? 'Salvar alterações' : 'Cadastrar conta'}

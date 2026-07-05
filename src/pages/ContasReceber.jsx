@@ -9,6 +9,14 @@ function formatarMoeda(valor) {
   return Number(valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 2 });
 }
 
+function formatarData(data) {
+  return data ? new Date(data).toLocaleDateString('pt-BR') : '—';
+}
+
+function recebidoDaConta(conta) {
+  return (conta.contas_receber_baixas || []).reduce((s, b) => s + Number(b.valor || 0), 0);
+}
+
 export default function ContasReceber() {
   const [contas, setContas] = useState([]);
   const [pacientes, setPacientes] = useState([]);
@@ -18,11 +26,16 @@ export default function ContasReceber() {
   const [carregando, setCarregando] = useState(true);
   const [filtro, setFiltro] = useState('todas');
 
+  const [baixaAbertaId, setBaixaAbertaId] = useState(null);
+  const [valorBaixa, setValorBaixa] = useState('');
+  const [dataBaixa, setDataBaixa] = useState(new Date().toISOString().slice(0, 10));
+  const [salvandoBaixa, setSalvandoBaixa] = useState(false);
+
   async function carregar() {
     setCarregando(true);
     const { data } = await supabase
       .from('contas_receber')
-      .select('*, pacientes(nome)')
+      .select('*, pacientes(nome), contas_receber_baixas(*)')
       .order('data_prevista', { ascending: true });
     setContas(data || []);
 
@@ -57,29 +70,64 @@ export default function ContasReceber() {
     carregar();
   }
 
-  async function marcarComoRecebido(conta) {
-    await supabase.from('contas_receber').update({ status: 'recebido', recebido_em: new Date().toISOString().slice(0, 10) }).eq('id', conta.id);
+  function abrirBaixa(conta) {
+    const restante = Number(conta.valor) - recebidoDaConta(conta);
+    setValorBaixa(restante > 0 ? restante.toFixed(2) : '');
+    setDataBaixa(new Date().toISOString().slice(0, 10));
+    setBaixaAbertaId(conta.id);
+  }
+
+  async function confirmarBaixa(conta) {
+    if (!valorBaixa || Number(valorBaixa) <= 0) return;
+    setSalvandoBaixa(true);
+
+    const { error } = await supabase.from('contas_receber_baixas').insert({
+      conta_receber_id: conta.id,
+      valor: valorBaixa,
+      data: dataBaixa,
+    });
+
+    if (error) { alert('Erro ao dar baixa: ' + error.message); setSalvandoBaixa(false); return; }
+
+    const recebidoAntes = recebidoDaConta(conta);
+    const novoRecebido = recebidoAntes + Number(valorBaixa);
+    const novoStatus = novoRecebido >= Number(conta.valor) ? 'recebido' : 'parcial';
+
+    await supabase.from('contas_receber').update({
+      status: novoStatus,
+      recebido_em: novoStatus === 'recebido' ? dataBaixa : conta.recebido_em,
+    }).eq('id', conta.id);
+
+    setSalvandoBaixa(false);
+    setBaixaAbertaId(null);
     carregar();
   }
 
-  async function reabrir(conta) {
-    await supabase.from('contas_receber').update({ status: 'pendente', recebido_em: null }).eq('id', conta.id);
+  async function excluirBaixa(baixa, conta) {
+    if (!confirm('Excluir esta baixa? O status da conta será recalculado.')) return;
+
+    await supabase.from('contas_receber_baixas').delete().eq('id', baixa.id);
+
+    const recebidoDepois = recebidoDaConta(conta) - Number(baixa.valor);
+    const novoStatus = recebidoDepois <= 0 ? 'pendente' : (recebidoDepois >= Number(conta.valor) ? 'recebido' : 'parcial');
+
+    await supabase.from('contas_receber').update({ status: novoStatus }).eq('id', conta.id);
     carregar();
   }
 
   async function excluir(id) {
-    if (!confirm('Excluir esta conta a receber?')) return;
+    if (!confirm('Excluir esta conta a receber e todas as baixas registradas nela?')) return;
     await supabase.from('contas_receber').delete().eq('id', id);
     carregar();
   }
 
   const filtradas = contas.filter((c) => filtro === 'todas' || c.status === filtro);
-  const totalPendente = contas.filter((c) => c.status === 'pendente').reduce((s, c) => s + Number(c.valor || 0), 0);
+  const totalPendente = contas.filter((c) => c.status !== 'recebido').reduce((s, c) => s + (Number(c.valor || 0) - recebidoDaConta(c)), 0);
 
   return (
     <Layout titulo="Contas a Receber">
       <div className="lista-topo">
-        <p className="dica-texto" style={{ margin: 0 }}>Total pendente: <strong>{formatarMoeda(totalPendente)}</strong></p>
+        <p className="dica-texto" style={{ margin: 0 }}>Total pendente (considerando baixas parciais): <strong>{formatarMoeda(totalPendente)}</strong></p>
         {!mostrarForm && (
           <button className="botao" style={{ width: 'auto', padding: '12px 24px' }} onClick={iniciarNovo}>
             + Lançamento manual
@@ -88,8 +136,8 @@ export default function ContasReceber() {
       </div>
 
       <p className="dica-texto" style={{ marginBottom: 20 }}>
-        Contas geradas automaticamente a partir do valor cobrado em cada atendimento de Harmonização
-        aparecem aqui sozinhas. Use o lançamento manual para outras cobranças.
+        Contas geradas automaticamente a partir do valor cobrado em cada atendimento aparecem aqui sozinhas.
+        Use o lançamento manual para outras cobranças. Dá pra dar baixa parcial quantas vezes precisar.
       </p>
 
       {mostrarForm && (
@@ -107,7 +155,7 @@ export default function ContasReceber() {
               <input required value={form.descricao} onChange={(e) => setForm({ ...form, descricao: e.target.value })} />
             </div>
             <div className="campo">
-              <label>Valor (R$)</label>
+              <label>Valor total (R$)</label>
               <input required type="number" step="0.01" value={form.valor} onChange={(e) => setForm({ ...form, valor: e.target.value })} />
             </div>
             <div className="campo">
@@ -127,35 +175,70 @@ export default function ContasReceber() {
       <div className="abas-servico" style={{ marginBottom: 20 }}>
         <button className={`aba ${filtro === 'todas' ? 'aba-ativa' : ''}`} onClick={() => setFiltro('todas')}>Todas</button>
         <button className={`aba ${filtro === 'pendente' ? 'aba-ativa' : ''}`} onClick={() => setFiltro('pendente')}>Pendentes</button>
+        <button className={`aba ${filtro === 'parcial' ? 'aba-ativa' : ''}`} onClick={() => setFiltro('parcial')}>Parciais</button>
         <button className={`aba ${filtro === 'recebido' ? 'aba-ativa' : ''}`} onClick={() => setFiltro('recebido')}>Recebidas</button>
       </div>
 
       {carregando ? (
         <p>Carregando...</p>
       ) : (
-        <table className="tabela-refinada">
-          <thead><tr><th>Paciente</th><th>Descrição</th><th>Valor</th><th>Previsto</th><th>Status</th><th></th></tr></thead>
-          <tbody>
-            {filtradas.map((c) => (
-              <tr key={c.id}>
-                <td>{c.pacientes?.nome || '—'}</td>
-                <td>{c.descricao}</td>
-                <td>{formatarMoeda(c.valor)}</td>
-                <td>{c.data_prevista ? new Date(c.data_prevista).toLocaleDateString('pt-BR') : '—'}</td>
-                <td><span className={`status-pill ${c.status === 'recebido' ? 'ativo' : 'inativo'}`}>{c.status === 'recebido' ? 'Recebido' : 'Pendente'}</span></td>
-                <td className="celula-acoes">
-                  {c.status === 'pendente' ? (
-                    <button className="botao-secundario" onClick={() => marcarComoRecebido(c)}>Marcar como recebido</button>
-                  ) : (
-                    <button className="botao-secundario" onClick={() => reabrir(c)}>Reabrir</button>
-                  )}
-                  <button className="botao-secundario" onClick={() => excluir(c.id)}>Excluir</button>
-                </td>
-              </tr>
-            ))}
-            {filtradas.length === 0 && <tr><td colSpan={6}>Nenhuma conta encontrada.</td></tr>}
-          </tbody>
-        </table>
+        <div className="lista-registros">
+          {filtradas.length === 0 && <p className="galeria-vazio">Nenhuma conta encontrada.</p>}
+          {filtradas.map((conta) => {
+            const recebido = recebidoDaConta(conta);
+            const restante = Number(conta.valor) - recebido;
+            return (
+              <div className="registro-card" key={conta.id}>
+                <div className="registro-topo">
+                  <strong>{conta.descricao} {conta.pacientes?.nome && `— ${conta.pacientes.nome}`}</strong>
+                  <div className="registro-topo-direita">
+                    <span className={`status-pill ${conta.status === 'recebido' ? 'ativo' : conta.status === 'parcial' ? 'parcial' : 'inativo'}`}>
+                      {conta.status === 'recebido' ? 'Recebido' : conta.status === 'parcial' ? 'Parcial' : 'Pendente'}
+                    </span>
+                    <div className="registro-acoes">
+                      {conta.status !== 'recebido' && <button onClick={() => abrirBaixa(conta)}>Dar baixa</button>}
+                      <button onClick={() => excluir(conta.id)}>Excluir</button>
+                    </div>
+                  </div>
+                </div>
+
+                <p>Valor total: {formatarMoeda(conta.valor)} · Recebido: {formatarMoeda(recebido)} · Restante: {formatarMoeda(restante)}</p>
+                {conta.data_prevista && <p>Previsto para: {formatarData(conta.data_prevista)}</p>}
+
+                {(conta.contas_receber_baixas || []).length > 0 && (
+                  <div style={{ marginTop: 8 }}>
+                    {conta.contas_receber_baixas.map((b) => (
+                      <p key={b.id} style={{ fontSize: 13, color: 'var(--terracota-escuro)' }}>
+                        Baixa de {formatarMoeda(b.valor)} em {formatarData(b.data)}
+                        {' — '}
+                        <button className="link-inline" onClick={() => excluirBaixa(b, conta)}>excluir</button>
+                      </p>
+                    ))}
+                  </div>
+                )}
+
+                {baixaAbertaId === conta.id && (
+                  <div className="aplicacao-linha" style={{ marginTop: 12 }}>
+                    <div className="campo">
+                      <label>Valor recebido agora (R$)</label>
+                      <input type="number" step="0.01" value={valorBaixa} onChange={(e) => setValorBaixa(e.target.value)} />
+                    </div>
+                    <div className="campo">
+                      <label>Data do recebimento</label>
+                      <input type="date" value={dataBaixa} onChange={(e) => setDataBaixa(e.target.value)} />
+                    </div>
+                    <div className="ficha-form-acoes" style={{ gridColumn: '1 / -1', marginTop: 0 }}>
+                      <button type="button" className="botao" disabled={salvandoBaixa} onClick={() => confirmarBaixa(conta)} style={{ maxWidth: 200 }}>
+                        {salvandoBaixa ? 'Salvando...' : 'Confirmar baixa'}
+                      </button>
+                      <button type="button" className="link-secundario" onClick={() => setBaixaAbertaId(null)}>Cancelar</button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
       )}
     </Layout>
   );

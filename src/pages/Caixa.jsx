@@ -27,7 +27,7 @@ export default function Caixa() {
   async function carregar() {
     setCarregando(true);
 
-    const { data: receber } = await supabase.from('contas_receber').select('*, pacientes(nome)');
+    const { data: receber } = await supabase.from('contas_receber').select('*, pacientes(nome), contas_receber_baixas(*)');
     setContasReceber(receber || []);
 
     const { data: pagar } = await supabase.from('contas_pagar').select('*');
@@ -76,10 +76,12 @@ export default function Caixa() {
 
   const entradasManual = lancamentos.filter((l) => l.tipo === 'entrada').reduce((s, l) => s + Number(l.valor || 0), 0);
   const saidasManual = lancamentos.filter((l) => l.tipo === 'saida').reduce((s, l) => s + Number(l.valor || 0), 0);
-  const recebidoTotal = contasReceber.filter((c) => c.status === 'recebido').reduce((s, c) => s + Number(c.valor || 0), 0);
+  const recebidoTotal = contasReceber.reduce((s, c) => s + (c.contas_receber_baixas || []).reduce((s2, b) => s2 + Number(b.valor || 0), 0), 0);
   const pagoTotal = contasPagar.filter((c) => c.status === 'pago').reduce((s, c) => s + Number(c.valor || 0), 0);
 
-  const aReceberPendente = contasReceber.filter((c) => c.status === 'pendente').reduce((s, c) => s + Number(c.valor || 0), 0);
+  const aReceberPendente = contasReceber
+    .filter((c) => c.status !== 'recebido')
+    .reduce((s, c) => s + (Number(c.valor || 0) - (c.contas_receber_baixas || []).reduce((s2, b) => s2 + Number(b.valor || 0), 0)), 0);
   const aPagarPendente = contasPagar.filter((c) => c.status === 'pendente').reduce((s, c) => s + Number(c.valor || 0), 0);
 
   const saldoAtual = entradasManual - saidasManual + recebidoTotal - pagoTotal;
@@ -89,9 +91,9 @@ export default function Caixa() {
     ...lancamentos.map((l) => ({
       data: l.data, tipo: l.tipo, descricao: l.descricao, valor: Number(l.valor || 0), origem: 'manual', id: l.id,
     })),
-    ...contasReceber.filter((c) => c.status === 'recebido').map((c) => ({
-      data: c.recebido_em, tipo: 'entrada', descricao: c.descricao + (c.pacientes?.nome ? ` — ${c.pacientes.nome}` : ''), valor: Number(c.valor || 0), origem: 'contas_receber',
-    })),
+    ...contasReceber.flatMap((c) => (c.contas_receber_baixas || []).map((b) => ({
+      data: b.data, tipo: 'entrada', descricao: c.descricao + (c.pacientes?.nome ? ` — ${c.pacientes.nome}` : ''), valor: Number(b.valor || 0), origem: 'contas_receber',
+    }))),
     ...contasPagar.filter((c) => c.status === 'pago').map((c) => ({
       data: c.pago_em, tipo: 'saida', descricao: c.descricao, valor: Number(c.valor || 0), origem: 'contas_pagar',
     })),
