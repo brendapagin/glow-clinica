@@ -6,7 +6,7 @@ const APLICACAO_VAZIA = {
   area_tratada: '', produto_id: '', quantidade_ml: '', unidade: 'ml', lote: '', validade: '', especificacao: '',
 };
 const FORM_VAZIO = {
-  data_aplicacao: '', data_retorno: '', observacoes: '', valor_cobrado: '', aplicacoes: [{ ...APLICACAO_VAZIA }],
+  data_aplicacao: '', data_retorno: '', observacoes: '', custo_operacional: '', aplicacoes: [{ ...APLICACAO_VAZIA }],
 };
 
 function formatarMoeda(valor) {
@@ -38,6 +38,7 @@ function custoTotalProcedimento(procedimento) {
 export function FichaHarmonizacao({ pacienteId }) {
   const [procedimentos, setProcedimentos] = useState([]);
   const [produtos, setProdutos] = useState([]);
+  const [custoOperacionalSugerido, setCustoOperacionalSugerido] = useState(null);
   const [form, setForm] = useState(FORM_VAZIO);
   const [mostrarForm, setMostrarForm] = useState(false);
   const [editandoId, setEditandoId] = useState(null);
@@ -53,6 +54,13 @@ export function FichaHarmonizacao({ pacienteId }) {
 
     const { data: prods } = await supabase.from('produtos').select('*').eq('ativo', true).order('nome');
     setProdutos(prods || []);
+
+    const { data: itensCusto } = await supabase.from('custos_operacionais').select('valor_mensal').eq('ativo', true);
+    const { data: config } = await supabase.from('configuracoes_custo').select('atendimentos_por_mes').limit(1).maybeSingle();
+    if (itensCusto && config && config.atendimentos_por_mes > 0) {
+      const totalMensal = itensCusto.reduce((soma, c) => soma + Number(c.valor_mensal || 0), 0);
+      setCustoOperacionalSugerido(totalMensal / config.atendimentos_por_mes);
+    }
   }
 
   useEffect(() => { carregar(); }, [pacienteId]);
@@ -81,7 +89,7 @@ export function FichaHarmonizacao({ pacienteId }) {
   }
 
   function iniciarNovo() {
-    setForm(FORM_VAZIO);
+    setForm({ ...FORM_VAZIO, custo_operacional: custoOperacionalSugerido ? custoOperacionalSugerido.toFixed(2) : '' });
     setEditandoId(null);
     setMostrarForm(true);
   }
@@ -91,7 +99,7 @@ export function FichaHarmonizacao({ pacienteId }) {
       data_aplicacao: proc.data_aplicacao || '',
       data_retorno: proc.data_retorno || '',
       observacoes: proc.observacoes || '',
-      valor_cobrado: proc.valor_cobrado ?? '',
+      custo_operacional: proc.custo_operacional ?? '',
       aplicacoes: (proc.harmonizacao_aplicacoes || []).length > 0
         ? proc.harmonizacao_aplicacoes.map((a) => ({
             area_tratada: a.area_tratada || '',
@@ -123,7 +131,7 @@ export function FichaHarmonizacao({ pacienteId }) {
       data_aplicacao: form.data_aplicacao || null,
       data_retorno: form.data_retorno || null,
       observacoes: form.observacoes,
-      valor_cobrado: form.valor_cobrado || null,
+      custo_operacional: form.custo_operacional || null,
     };
 
     let procedimentoId = editandoId;
@@ -239,22 +247,29 @@ export function FichaHarmonizacao({ pacienteId }) {
             </button>
 
             {(() => {
-              const custoTotalForm = form.aplicacoes
+              const custoProdutosForm = form.aplicacoes
                 .map((ap) => custoAplicacaoForm(ap, produtos))
                 .filter((c) => c !== null)
                 .reduce((soma, c) => soma + c, 0);
-              const temCusto = form.aplicacoes.some((ap) => custoAplicacaoForm(ap, produtos) !== null);
-              return temCusto ? (
+              const temCustoProdutos = form.aplicacoes.some((ap) => custoAplicacaoForm(ap, produtos) !== null);
+              const custoOperacional = Number(form.custo_operacional) || 0;
+              return (temCustoProdutos || custoOperacional > 0) ? (
                 <p className="dica-texto">
-                  Custo total estimado dos produtos: {formatarMoeda(custoTotalForm)}
-                  {form.valor_cobrado > 0 && ` · Margem estimada: ${formatarMoeda(form.valor_cobrado - custoTotalForm)}`}
+                  Custo dos produtos: {formatarMoeda(custoProdutosForm)}
+                  {custoOperacional > 0 && ` · Custo operacional: ${formatarMoeda(custoOperacional)}`}
+                  {' · '}<strong>Custo total do atendimento: {formatarMoeda(custoProdutosForm + custoOperacional)}</strong>
                 </p>
               ) : null;
             })()}
 
             <div className="campo">
-              <label>Valor cobrado pelo atendimento (R$)</label>
-              <input type="number" step="0.01" value={form.valor_cobrado} onChange={(e) => setForm({ ...form, valor_cobrado: e.target.value })} placeholder="Quanto foi cobrado da paciente" />
+              <label>Custo operacional deste atendimento (R$)</label>
+              <input type="number" step="0.01" value={form.custo_operacional} onChange={(e) => setForm({ ...form, custo_operacional: e.target.value })} />
+              {custoOperacionalSugerido !== null && (
+                <p className="dica-texto" style={{ marginTop: 6 }}>
+                  Sugestão com base na sua composição de custos: {formatarMoeda(custoOperacionalSugerido)} (ajustável)
+                </p>
+              )}
             </div>
 
             <div className="campo">
@@ -297,15 +312,19 @@ export function FichaHarmonizacao({ pacienteId }) {
                   </p>
                 );
               })}
-              {custoTotalProcedimento(proc) !== null && (
-                <p className="registro-custo-total">
-                  Custo estimado do atendimento: {formatarMoeda(custoTotalProcedimento(proc))}
-                  {proc.valor_cobrado > 0 && ` · Cobrado: ${formatarMoeda(proc.valor_cobrado)} · Margem: ${formatarMoeda(proc.valor_cobrado - custoTotalProcedimento(proc))}`}
-                </p>
-              )}
-              {custoTotalProcedimento(proc) === null && proc.valor_cobrado > 0 && (
-                <p className="registro-custo-total">Cobrado: {formatarMoeda(proc.valor_cobrado)}</p>
-              )}
+              {(() => {
+                const custoProdutos = custoTotalProcedimento(proc);
+                const custoOperacional = Number(proc.custo_operacional) || 0;
+                if (custoProdutos === null && custoOperacional === 0) return null;
+                const total = (custoProdutos || 0) + custoOperacional;
+                return (
+                  <p className="registro-custo-total">
+                    Custo dos produtos: {formatarMoeda(custoProdutos || 0)}
+                    {custoOperacional > 0 && ` · Custo operacional: ${formatarMoeda(custoOperacional)}`}
+                    {' · '}<strong>Total: {formatarMoeda(total)}</strong>
+                  </p>
+                );
+              })()}
               {proc.data_retorno && <p>Retorno previsto: {new Date(proc.data_retorno).toLocaleDateString('pt-BR')}</p>}
               {proc.observacoes && <p>{proc.observacoes}</p>}
             </div>
