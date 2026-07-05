@@ -6,7 +6,7 @@ const APLICACAO_VAZIA = {
   area_tratada: '', produto_id: '', quantidade_ml: '', unidade: 'ml', lote: '', validade: '', especificacao: '',
 };
 const FORM_VAZIO = {
-  data_aplicacao: '', data_retorno: '', observacoes: '', aplicacoes: [{ ...APLICACAO_VAZIA }],
+  data_aplicacao: '', data_retorno: '', observacoes: '', valor_cobrado: '', aplicacoes: [{ ...APLICACAO_VAZIA }],
 };
 
 function formatarMoeda(valor) {
@@ -19,6 +19,13 @@ function custoAplicacao(aplicacao) {
   if (!produto || !produto.custo_unitario || !aplicacao.quantidade_ml) return null;
   if (produto.unidade && aplicacao.unidade && produto.unidade !== aplicacao.unidade) return null;
   return produto.custo_unitario * aplicacao.quantidade_ml;
+}
+
+function custoAplicacaoForm(ap, listaProdutos) {
+  const produto = listaProdutos.find((p) => p.id === ap.produto_id);
+  if (!produto || !produto.custo_unitario || !ap.quantidade_ml) return null;
+  if (produto.unidade && ap.unidade && produto.unidade !== ap.unidade) return null;
+  return produto.custo_unitario * ap.quantidade_ml;
 }
 
 function custoTotalProcedimento(procedimento) {
@@ -84,6 +91,7 @@ export function FichaHarmonizacao({ pacienteId }) {
       data_aplicacao: proc.data_aplicacao || '',
       data_retorno: proc.data_retorno || '',
       observacoes: proc.observacoes || '',
+      valor_cobrado: proc.valor_cobrado ?? '',
       aplicacoes: (proc.harmonizacao_aplicacoes || []).length > 0
         ? proc.harmonizacao_aplicacoes.map((a) => ({
             area_tratada: a.area_tratada || '',
@@ -115,6 +123,7 @@ export function FichaHarmonizacao({ pacienteId }) {
       data_aplicacao: form.data_aplicacao || null,
       data_retorno: form.data_retorno || null,
       observacoes: form.observacoes,
+      valor_cobrado: form.valor_cobrado || null,
     };
 
     let procedimentoId = editandoId;
@@ -219,12 +228,34 @@ export function FichaHarmonizacao({ pacienteId }) {
                 {form.aplicacoes.length > 1 && (
                   <button type="button" className="remover-aplicacao" onClick={() => removerLinha(index)}>Remover esta aplicação</button>
                 )}
+                {custoAplicacaoForm(ap, produtos) !== null && (
+                  <p className="custo-linha-form">Custo estimado desta aplicação: {formatarMoeda(custoAplicacaoForm(ap, produtos))}</p>
+                )}
               </div>
             ))}
 
             <button type="button" className="botao-secundario" onClick={adicionarLinha} style={{ marginBottom: 20 }}>
               + Adicionar outra aplicação
             </button>
+
+            {(() => {
+              const custoTotalForm = form.aplicacoes
+                .map((ap) => custoAplicacaoForm(ap, produtos))
+                .filter((c) => c !== null)
+                .reduce((soma, c) => soma + c, 0);
+              const temCusto = form.aplicacoes.some((ap) => custoAplicacaoForm(ap, produtos) !== null);
+              return temCusto ? (
+                <p className="dica-texto">
+                  Custo total estimado dos produtos: {formatarMoeda(custoTotalForm)}
+                  {form.valor_cobrado > 0 && ` · Margem estimada: ${formatarMoeda(form.valor_cobrado - custoTotalForm)}`}
+                </p>
+              ) : null;
+            })()}
+
+            <div className="campo">
+              <label>Valor cobrado pelo atendimento (R$)</label>
+              <input type="number" step="0.01" value={form.valor_cobrado} onChange={(e) => setForm({ ...form, valor_cobrado: e.target.value })} placeholder="Quanto foi cobrado da paciente" />
+            </div>
 
             <div className="campo">
               <label>Observações gerais</label>
@@ -267,7 +298,13 @@ export function FichaHarmonizacao({ pacienteId }) {
                 );
               })}
               {custoTotalProcedimento(proc) !== null && (
-                <p className="registro-custo-total">Custo estimado do atendimento: {formatarMoeda(custoTotalProcedimento(proc))}</p>
+                <p className="registro-custo-total">
+                  Custo estimado do atendimento: {formatarMoeda(custoTotalProcedimento(proc))}
+                  {proc.valor_cobrado > 0 && ` · Cobrado: ${formatarMoeda(proc.valor_cobrado)} · Margem: ${formatarMoeda(proc.valor_cobrado - custoTotalProcedimento(proc))}`}
+                </p>
+              )}
+              {custoTotalProcedimento(proc) === null && proc.valor_cobrado > 0 && (
+                <p className="registro-custo-total">Cobrado: {formatarMoeda(proc.valor_cobrado)}</p>
               )}
               {proc.data_retorno && <p>Retorno previsto: {new Date(proc.data_retorno).toLocaleDateString('pt-BR')}</p>}
               {proc.observacoes && <p>{proc.observacoes}</p>}
