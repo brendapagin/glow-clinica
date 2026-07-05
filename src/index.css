@@ -357,6 +357,7 @@ select.select-papel { font-family: var(--fonte-corpo); padding: 6px; border: 1px
 .registro-topo-direita span { color: var(--terracota-escuro); font-size: 14px; white-space: nowrap; }
 .registro-card p { margin: 4px 0; }
 .registro-exames { color: var(--terracota-escuro); }
+.registro-custo-total { color: var(--terracota-escuro); font-weight: 500; margin-top: 8px !important; padding-top: 8px; border-top: 1px dashed var(--nude); }
 
 .registro-acoes { display: flex; gap: 12px; }
 .registro-acoes button {
