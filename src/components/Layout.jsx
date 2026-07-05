@@ -1,11 +1,12 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Users, ShieldCheck, LogOut, Sparkles, Package } from 'lucide-react';
+import { Users, ShieldCheck, LogOut, Sparkles, Package, Calculator } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 const ITENS_NAV = [
   { to: '/pacientes', label: 'Pacientes', Icone: Users, tela: 'pacientes' },
   { to: '/servicos', label: 'Serviços', Icone: Sparkles, tela: 'servicos' },
   { to: '/produtos', label: 'Produtos', Icone: Package, tela: 'produtos' },
+  { to: '/custos', label: 'Custos', Icone: Calculator, tela: 'custos' },
   { to: '/usuarios', label: 'Usuários', Icone: ShieldCheck, tela: 'usuarios' },
 ];
 
