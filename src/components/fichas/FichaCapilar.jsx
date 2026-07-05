@@ -11,6 +11,7 @@ export function FichaCapilar({ pacienteId }) {
   const [registros, setRegistros] = useState([]);
   const [form, setForm] = useState(VAZIO);
   const [mostrarForm, setMostrarForm] = useState(false);
+  const [editandoId, setEditandoId] = useState(null);
   const [salvando, setSalvando] = useState(false);
 
   async function carregar() {
@@ -24,22 +25,55 @@ export function FichaCapilar({ pacienteId }) {
 
   useEffect(() => { carregar(); }, [pacienteId]);
 
+  function iniciarNovo() {
+    setForm(VAZIO);
+    setEditandoId(null);
+    setMostrarForm(true);
+  }
+
+  function iniciarEdicao(r) {
+    setForm({
+      tipo_queda: r.tipo_queda || '',
+      classificacao: r.classificacao || '',
+      ferro: r.ferro ?? '',
+      ferritina: r.ferritina ?? '',
+      vitamina_d: r.vitamina_d ?? '',
+      tsh: r.tsh ?? '',
+      protocolo: r.protocolo || '',
+      data_sessao: r.data_sessao || '',
+      observacoes: r.observacoes || '',
+    });
+    setEditandoId(r.id);
+    setMostrarForm(true);
+  }
+
+  async function excluir(id) {
+    if (!confirm('Excluir este registro?')) return;
+    await supabase.from('fichas_capilar').delete().eq('id', id);
+    carregar();
+  }
+
   async function salvar(e) {
     e.preventDefault();
     setSalvando(true);
-    const { error } = await supabase.from('fichas_capilar').insert({
-      paciente_id: pacienteId,
+    const dados = {
       ...form,
       ferro: form.ferro || null,
       ferritina: form.ferritina || null,
       vitamina_d: form.vitamina_d || null,
       tsh: form.tsh || null,
       data_sessao: form.data_sessao || null,
-    });
+    };
+
+    const { error } = editandoId
+      ? await supabase.from('fichas_capilar').update(dados).eq('id', editandoId)
+      : await supabase.from('fichas_capilar').insert({ paciente_id: pacienteId, ...dados });
+
     setSalvando(false);
     if (error) { alert('Erro ao salvar: ' + error.message); return; }
     setForm(VAZIO);
     setMostrarForm(false);
+    setEditandoId(null);
     carregar();
   }
 
@@ -48,9 +82,9 @@ export function FichaCapilar({ pacienteId }) {
       <div className="ficha-secao">
         <div className="ficha-secao-topo">
           <h3>Histórico de registros — Capilar</h3>
-          <button className="botao-secundario" onClick={() => setMostrarForm((v) => !v)}>
-            {mostrarForm ? 'Cancelar' : '+ Novo registro'}
-          </button>
+          {!mostrarForm && (
+            <button className="botao-secundario" onClick={iniciarNovo}>+ Novo registro</button>
+          )}
         </div>
 
         {mostrarForm && (
@@ -93,9 +127,12 @@ export function FichaCapilar({ pacienteId }) {
               <label>Observações</label>
               <input value={form.observacoes} onChange={(e) => setForm({ ...form, observacoes: e.target.value })} />
             </div>
-            <button type="submit" className="botao" disabled={salvando} style={{ maxWidth: 200 }}>
-              {salvando ? 'Salvando...' : 'Salvar registro'}
-            </button>
+            <div className="ficha-form-acoes">
+              <button type="submit" className="botao" disabled={salvando} style={{ maxWidth: 220 }}>
+                {salvando ? 'Salvando...' : editandoId ? 'Salvar alterações' : 'Salvar registro'}
+              </button>
+              <button type="button" className="link-secundario" onClick={() => { setMostrarForm(false); setEditandoId(null); }}>Cancelar</button>
+            </div>
           </form>
         )}
 
@@ -105,7 +142,13 @@ export function FichaCapilar({ pacienteId }) {
             <div className="registro-card" key={r.id}>
               <div className="registro-topo">
                 <strong>{r.tipo_queda || 'Sem tipo definido'}</strong>
-                <span>{r.data_sessao ? new Date(r.data_sessao).toLocaleDateString('pt-BR') : new Date(r.criado_em).toLocaleDateString('pt-BR')}</span>
+                <div className="registro-topo-direita">
+                  <span>{r.data_sessao ? new Date(r.data_sessao).toLocaleDateString('pt-BR') : new Date(r.criado_em).toLocaleDateString('pt-BR')}</span>
+                  <div className="registro-acoes">
+                    <button onClick={() => iniciarEdicao(r)}>Editar</button>
+                    <button onClick={() => excluir(r.id)}>Excluir</button>
+                  </div>
+                </div>
               </div>
               <p>{r.classificacao && `Classificação: ${r.classificacao}`}</p>
               <p>{r.protocolo && `Protocolo: ${r.protocolo}`}</p>
