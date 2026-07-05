@@ -9,6 +9,7 @@ import Produtos from './pages/Produtos';
 import Custos from './pages/Custos';
 import ContasPagar from './pages/ContasPagar';
 import ContasReceber from './pages/ContasReceber';
+import Caixa from './pages/Caixa';
 import { Protegida } from './components/RotaProtegida';
 
 export default function App() {
@@ -77,6 +78,14 @@ export default function App() {
         element={
           <Protegida telaRequerida="contas_receber">
             <ContasReceber />
+          </Protegida>
+        }
+      />
+      <Route
+        path="/caixa"
+        element={
+          <Protegida telaRequerida="caixa">
+            <Caixa />
           </Protegida>
         }
       />

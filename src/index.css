@@ -388,6 +388,17 @@ select.select-papel { font-family: var(--fonte-corpo); padding: 6px; border: 1px
 /* ---------- Ações em tabela ---------- */
 .celula-acoes { display: flex; gap: 8px; }
 
+/* ---------- Caixa ---------- */
+.caixa-cartoes { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 32px; }
+.caixa-cartao {
+  background: var(--creme-claro); border: 1px solid var(--nude); border-radius: 10px;
+  padding: 20px 22px; display: flex; flex-direction: column; gap: 8px;
+}
+.caixa-cartao-label { font-size: 12px; letter-spacing: 1px; text-transform: uppercase; color: var(--terracota-escuro); }
+.caixa-cartao-valor { font-family: var(--fonte-display); font-size: 26px; font-weight: 500; color: var(--marrom-tinta); }
+.caixa-positivo { color: var(--sucesso); }
+.caixa-negativo { color: var(--erro); }
+
 .galeria-fotos { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
 .galeria-coluna { }
 .galeria-cabecalho { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
