@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { NavBarra } from '../components/NavBarra';
+import { Layout } from '../components/Layout';
 import { FichaCapilar } from '../components/fichas/FichaCapilar';
 import { FichaHarmonizacao } from '../components/fichas/FichaHarmonizacao';
 
@@ -58,50 +58,46 @@ export default function PacienteFicha() {
   const ComponenteFicha = abaAtual ? COMPONENTES_FICHA[abaAtual] : null;
 
   return (
-    <div>
-      <NavBarra titulo="GLOW — Ficha do Paciente" />
+    <Layout>
+      <button className="link-secundario" style={{ textAlign: 'left', marginBottom: 16 }} onClick={() => navigate('/pacientes')}>
+        ← Voltar para pacientes
+      </button>
 
-      <div className="conteudo">
-        <button className="link-secundario" style={{ textAlign: 'left', marginBottom: 16 }} onClick={() => navigate('/pacientes')}>
-          ← Voltar para pacientes
-        </button>
-
-        <div className="paciente-cabecalho">
-          <h2>{paciente.nome}</h2>
-          <p>{[paciente.telefone, paciente.email, paciente.cpf].filter(Boolean).join(' · ') || 'Sem contato cadastrado'}</p>
-        </div>
-
-        <div className="abas-servico">
-          {servicosAtivos.map((s) => (
-            <button
-              key={s.slug}
-              className={`aba ${abaAtual === s.slug ? 'aba-ativa' : ''}`}
-              onClick={() => setAbaAtual(s.slug)}
-            >
-              {s.nome}
-            </button>
-          ))}
-
-          {servicosDisponiveis.length > 0 && (
-            <div className="aba-adicionar">
-              <button className="aba aba-adicionar-botao" onClick={() => setMostrarAdicionar((v) => !v)}>+ Adicionar serviço</button>
-              {mostrarAdicionar && (
-                <div className="aba-adicionar-menu">
-                  {servicosDisponiveis.map((s) => (
-                    <button key={s.id} onClick={() => adicionarServico(s.id)}>{s.nome}</button>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-
-        {servicosAtivos.length === 0 && (
-          <p className="galeria-vazio">Este paciente ainda não tem nenhum serviço iniciado. Clique em "+ Adicionar serviço" acima.</p>
-        )}
-
-        {ComponenteFicha && <ComponenteFicha pacienteId={id} />}
+      <div className="paciente-cabecalho">
+        <h2>{paciente.nome}</h2>
+        <p>{[paciente.telefone, paciente.email, paciente.cpf].filter(Boolean).join(' · ') || 'Sem contato cadastrado'}</p>
       </div>
-    </div>
+
+      <div className="abas-servico">
+        {servicosAtivos.map((s) => (
+          <button
+            key={s.slug}
+            className={`aba ${abaAtual === s.slug ? 'aba-ativa' : ''}`}
+            onClick={() => setAbaAtual(s.slug)}
+          >
+            {s.nome}
+          </button>
+        ))}
+
+        {servicosDisponiveis.length > 0 && (
+          <div className="aba-adicionar">
+            <button className="aba aba-adicionar-botao" onClick={() => setMostrarAdicionar((v) => !v)}>+ Adicionar serviço</button>
+            {mostrarAdicionar && (
+              <div className="aba-adicionar-menu">
+                {servicosDisponiveis.map((s) => (
+                  <button key={s.id} onClick={() => adicionarServico(s.id)}>{s.nome}</button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {servicosAtivos.length === 0 && (
+        <p className="galeria-vazio">Este paciente ainda não tem nenhum serviço iniciado. Clique em "+ Adicionar serviço" acima.</p>
+      )}
+
+      {ComponenteFicha && <ComponenteFicha pacienteId={id} />}
+    </Layout>
   );
 }
