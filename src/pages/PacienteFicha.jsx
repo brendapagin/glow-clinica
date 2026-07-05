@@ -6,10 +6,10 @@ import { FichaCapilar } from '../components/fichas/FichaCapilar';
 import { FichaHarmonizacao } from '../components/fichas/FichaHarmonizacao';
 import { FichaGenerica } from '../components/fichas/FichaGenerica';
 
-function renderizarFicha(slug, nome, pacienteId) {
-  if (slug === 'capilar') return <FichaCapilar pacienteId={pacienteId} />;
-  if (slug === 'harmonizacao') return <FichaHarmonizacao pacienteId={pacienteId} />;
-  return <FichaGenerica pacienteId={pacienteId} servicoSlug={slug} servicoNome={nome} />;
+function renderizarFicha(slug, nome, pacienteId, pacienteNome) {
+  if (slug === 'capilar') return <FichaCapilar pacienteId={pacienteId} pacienteNome={pacienteNome} />;
+  if (slug === 'harmonizacao') return <FichaHarmonizacao pacienteId={pacienteId} pacienteNome={pacienteNome} />;
+  return <FichaGenerica pacienteId={pacienteId} servicoSlug={slug} servicoNome={nome} pacienteNome={pacienteNome} />;
 }
 
 export default function PacienteFicha() {
@@ -101,7 +101,7 @@ export default function PacienteFicha() {
         <p className="galeria-vazio">Este paciente ainda não tem nenhum serviço iniciado. Clique em "+ Adicionar serviço" acima.</p>
       )}
 
-      {abaAtual && renderizarFicha(abaAtual, servicoAtual?.nome, id)}
+      {abaAtual && renderizarFicha(abaAtual, servicoAtual?.nome, id, paciente.nome)}
     </Layout>
   );
 }
