@@ -7,6 +7,7 @@ const TELAS = [
   { valor: 'pacientes', label: 'Pacientes' },
   { valor: 'servicos', label: 'Serviços' },
   { valor: 'produtos', label: 'Produtos' },
+  { valor: 'custos', label: 'Custos' },
   { valor: 'usuarios', label: 'Usuários' },
 ];
 const NOVO_VAZIO = { nome: '', email: '', senha: '', papel: 'recepcao', permissoes: [] };
