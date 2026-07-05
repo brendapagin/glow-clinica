@@ -89,23 +89,24 @@ body {
 
 .form-caixa h2 {
   font-family: var(--fonte-display);
-  font-size: 28px;
+  font-size: 32px;
   font-weight: 500;
   margin: 0 0 6px;
 }
 
 .form-caixa .subtitulo {
-  font-size: 13px;
+  font-size: 15px;
   color: var(--terracota-escuro);
   margin: 0 0 32px;
   font-weight: 300;
+  line-height: 1.5;
 }
 
 .campo { margin-bottom: 24px; }
 
 .campo label {
   display: block;
-  font-size: 11px;
+  font-size: 13px;
   letter-spacing: 1.5px;
   text-transform: uppercase;
   color: var(--terracota-escuro);
@@ -117,9 +118,9 @@ body {
   border: none;
   border-bottom: 1px solid var(--nude);
   background: transparent;
-  padding: 8px 2px;
+  padding: 10px 2px;
   font-family: var(--fonte-corpo);
-  font-size: 15px;
+  font-size: 18px;
   color: var(--marrom-tinta);
   transition: border-color 0.3s;
 }
@@ -131,12 +132,12 @@ body {
 
 .botao {
   width: 100%;
-  padding: 13px;
+  padding: 15px;
   background: var(--terracota);
   color: var(--creme-claro);
   border: none;
   font-family: var(--fonte-corpo);
-  font-size: 13px;
+  font-size: 14px;
   letter-spacing: 2px;
   text-transform: uppercase;
   cursor: pointer;
@@ -150,7 +151,7 @@ body {
   display: block;
   text-align: center;
   margin-top: 22px;
-  font-size: 13px;
+  font-size: 15px;
   color: var(--terracota-escuro);
   text-decoration: none;
   border-bottom: 1px solid transparent;
@@ -162,10 +163,11 @@ body {
 .link-secundario:hover { border-bottom-color: var(--terracota-escuro); }
 
 .mensagem {
-  font-size: 13px;
-  padding: 10px 12px;
+  font-size: 15px;
+  padding: 12px 14px;
   border-radius: 2px;
   margin-bottom: 20px;
+  line-height: 1.4;
 }
 .mensagem.erro { background: #F5E4E1; color: var(--erro); }
 .mensagem.sucesso { background: #E7EFE7; color: var(--sucesso); }
