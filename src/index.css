@@ -154,11 +154,13 @@ body {
   font-size: 15px;
   color: var(--terracota-escuro);
   text-decoration: none;
+  border: none;
   border-bottom: 1px solid transparent;
   background: none;
   width: 100%;
   cursor: pointer;
   font-family: var(--fonte-corpo);
+  padding: 0;
 }
 .link-secundario:hover { border-bottom-color: var(--terracota-escuro); }
 
@@ -339,6 +341,10 @@ select.select-papel { font-family: var(--fonte-corpo); padding: 6px; border: 1px
   grid-column: 1 / -1; justify-self: start; background: none; border: none;
   color: var(--erro); font-size: 13px; cursor: pointer; text-decoration: underline;
   padding: 0 0 14px; font-family: var(--fonte-corpo);
+}
+.custo-linha-form {
+  grid-column: 1 / -1; font-size: 13px; color: var(--terracota-escuro);
+  font-style: italic; margin: -6px 0 14px;
 }
 
 .ficha-form-acoes { display: flex; align-items: center; gap: 24px; margin-top: 16px; }
