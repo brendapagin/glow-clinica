@@ -6,6 +6,7 @@ import Pacientes from './pages/Pacientes';
 import PacienteFicha from './pages/PacienteFicha';
 import Servicos from './pages/Servicos';
 import Produtos from './pages/Produtos';
+import Custos from './pages/Custos';
 import { Protegida } from './components/RotaProtegida';
 
 export default function App() {
@@ -50,6 +51,14 @@ export default function App() {
         element={
           <Protegida telaRequerida="produtos">
             <Produtos />
+          </Protegida>
+        }
+      />
+      <Route
+        path="/custos"
+        element={
+          <Protegida telaRequerida="custos">
+            <Custos />
           </Protegida>
         }
       />
