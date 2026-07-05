@@ -4,11 +4,13 @@ import { supabase } from '../lib/supabase';
 import { Layout } from '../components/Layout';
 import { FichaCapilar } from '../components/fichas/FichaCapilar';
 import { FichaHarmonizacao } from '../components/fichas/FichaHarmonizacao';
+import { FichaGenerica } from '../components/fichas/FichaGenerica';
 
-const COMPONENTES_FICHA = {
-  capilar: FichaCapilar,
-  harmonizacao: FichaHarmonizacao,
-};
+function renderizarFicha(slug, nome, pacienteId) {
+  if (slug === 'capilar') return <FichaCapilar pacienteId={pacienteId} />;
+  if (slug === 'harmonizacao') return <FichaHarmonizacao pacienteId={pacienteId} />;
+  return <FichaGenerica pacienteId={pacienteId} servicoSlug={slug} servicoNome={nome} />;
+}
 
 export default function PacienteFicha() {
   const { id } = useParams();
@@ -55,7 +57,7 @@ export default function PacienteFicha() {
   if (carregando) return <div className="tela-aviso">Carregando...</div>;
   if (!paciente) return <div className="tela-aviso">Paciente não encontrado.</div>;
 
-  const ComponenteFicha = abaAtual ? COMPONENTES_FICHA[abaAtual] : null;
+  const servicoAtual = servicosAtivos.find((s) => s.slug === abaAtual);
 
   return (
     <Layout>
@@ -97,7 +99,7 @@ export default function PacienteFicha() {
         <p className="galeria-vazio">Este paciente ainda não tem nenhum serviço iniciado. Clique em "+ Adicionar serviço" acima.</p>
       )}
 
-      {ComponenteFicha && <ComponenteFicha pacienteId={id} />}
+      {abaAtual && renderizarFicha(abaAtual, servicoAtual?.nome, id)}
     </Layout>
   );
 }

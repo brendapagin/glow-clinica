@@ -3,11 +3,17 @@ import { supabase } from '../lib/supabase';
 import { Layout } from '../components/Layout';
 
 const PAPEIS = ['pendente', 'admin', 'recepcao', 'profissional', 'paciente'];
+const NOVO_VAZIO = { nome: '', email: '', senha: '', papel: 'recepcao' };
 
 export default function Usuarios() {
   const [usuarios, setUsuarios] = useState([]);
   const [carregando, setCarregando] = useState(true);
   const [salvandoId, setSalvandoId] = useState(null);
+
+  const [mostrarNovo, setMostrarNovo] = useState(false);
+  const [novo, setNovo] = useState(NOVO_VAZIO);
+  const [criando, setCriando] = useState(false);
+  const [erroCriacao, setErroCriacao] = useState('');
 
   async function carregar() {
     setCarregando(true);
@@ -36,8 +42,69 @@ export default function Usuarios() {
     if (error) alert('Erro ao salvar: ' + error.message);
   }
 
+  async function criarUsuario(e) {
+    e.preventDefault();
+    setCriando(true);
+    setErroCriacao('');
+
+    const { data, error } = await supabase.functions.invoke('criar-usuario', { body: novo });
+
+    setCriando(false);
+
+    if (error || data?.error) {
+      setErroCriacao(data?.error || 'Não foi possível criar o usuário. Confira se a Edge Function foi publicada.');
+      return;
+    }
+
+    setNovo(NOVO_VAZIO);
+    setMostrarNovo(false);
+    carregar();
+  }
+
   return (
     <Layout titulo="Usuários">
+      <div className="lista-topo">
+        <p className="dica-texto" style={{ margin: 0 }}>
+          Aprove solicitações de acesso ou cadastre um usuário diretamente.
+        </p>
+        <button className="botao" style={{ width: 'auto', padding: '12px 24px' }} onClick={() => setMostrarNovo((v) => !v)}>
+          {mostrarNovo ? 'Cancelar' : '+ Novo usuário'}
+        </button>
+      </div>
+
+      {mostrarNovo && (
+        <form className="ficha-form" onSubmit={criarUsuario} style={{ marginBottom: 32 }}>
+          {erroCriacao && <div className="mensagem erro">{erroCriacao}</div>}
+          <div className="ficha-grid">
+            <div className="campo">
+              <label>Nome completo</label>
+              <input required value={novo.nome} onChange={(e) => setNovo({ ...novo, nome: e.target.value })} />
+            </div>
+            <div className="campo">
+              <label>E-mail</label>
+              <input required type="email" value={novo.email} onChange={(e) => setNovo({ ...novo, email: e.target.value })} />
+            </div>
+            <div className="campo">
+              <label>Senha inicial</label>
+              <input required type="text" minLength={6} value={novo.senha} onChange={(e) => setNovo({ ...novo, senha: e.target.value })} placeholder="Mínimo 6 caracteres" />
+            </div>
+            <div className="campo">
+              <label>Papel</label>
+              <select value={novo.papel} onChange={(e) => setNovo({ ...novo, papel: e.target.value })}>
+                <option value="admin">admin</option>
+                <option value="recepcao">recepcao</option>
+                <option value="profissional">profissional</option>
+                <option value="paciente">paciente</option>
+              </select>
+            </div>
+          </div>
+          <button type="submit" className="botao" disabled={criando} style={{ maxWidth: 220 }}>
+            {criando ? 'Criando...' : 'Criar usuário'}
+          </button>
+          <p className="dica-texto">A pessoa já entra ativa, com o papel escolhido — sem precisar de aprovação.</p>
+        </form>
+      )}
+
       {carregando ? (
         <p>Carregando...</p>
       ) : (
