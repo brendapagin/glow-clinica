@@ -9,6 +9,25 @@ const FORM_VAZIO = {
   data_aplicacao: '', data_retorno: '', observacoes: '', aplicacoes: [{ ...APLICACAO_VAZIA }],
 };
 
+function formatarMoeda(valor) {
+  if (valor === null || valor === undefined || isNaN(valor)) return null;
+  return Number(valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 2 });
+}
+
+function custoAplicacao(aplicacao) {
+  const produto = aplicacao.produtos;
+  if (!produto || !produto.custo_unitario || !aplicacao.quantidade_ml) return null;
+  if (produto.unidade && aplicacao.unidade && produto.unidade !== aplicacao.unidade) return null;
+  return produto.custo_unitario * aplicacao.quantidade_ml;
+}
+
+function custoTotalProcedimento(procedimento) {
+  const aplicacoes = procedimento.harmonizacao_aplicacoes || [];
+  const custos = aplicacoes.map(custoAplicacao).filter((c) => c !== null);
+  if (custos.length === 0) return null;
+  return custos.reduce((soma, c) => soma + c, 0);
+}
+
 export function FichaHarmonizacao({ pacienteId }) {
   const [procedimentos, setProcedimentos] = useState([]);
   const [produtos, setProdutos] = useState([]);
@@ -20,7 +39,7 @@ export function FichaHarmonizacao({ pacienteId }) {
   async function carregar() {
     const { data: procs } = await supabase
       .from('harmonizacao_procedimentos')
-      .select('*, harmonizacao_aplicacoes(*, produtos(nome))')
+      .select('*, harmonizacao_aplicacoes(*, produtos(nome, custo_unitario, unidade))')
       .eq('paciente_id', pacienteId)
       .order('criado_em', { ascending: false });
     setProcedimentos(procs || []);
@@ -234,15 +253,22 @@ export function FichaHarmonizacao({ pacienteId }) {
                   </div>
                 </div>
               </div>
-              {(proc.harmonizacao_aplicacoes || []).map((a) => (
-                <p key={a.id}>
-                  {a.area_tratada}
-                  {a.produtos?.nome && ` · ${a.produtos.nome}`}
-                  {a.quantidade_ml && ` · ${a.quantidade_ml}${a.unidade || 'ml'}`}
-                  {a.lote && ` · Lote ${a.lote}`}
-                  {a.validade && ` · Val. ${new Date(a.validade).toLocaleDateString('pt-BR')}`}
-                </p>
-              ))}
+              {(proc.harmonizacao_aplicacoes || []).map((a) => {
+                const custo = custoAplicacao(a);
+                return (
+                  <p key={a.id}>
+                    {a.area_tratada}
+                    {a.produtos?.nome && ` · ${a.produtos.nome}`}
+                    {a.quantidade_ml && ` · ${a.quantidade_ml}${a.unidade || 'ml'}`}
+                    {a.lote && ` · Lote ${a.lote}`}
+                    {a.validade && ` · Val. ${new Date(a.validade).toLocaleDateString('pt-BR')}`}
+                    {custo !== null && ` · ${formatarMoeda(custo)}`}
+                  </p>
+                );
+              })}
+              {custoTotalProcedimento(proc) !== null && (
+                <p className="registro-custo-total">Custo estimado do atendimento: {formatarMoeda(custoTotalProcedimento(proc))}</p>
+              )}
               {proc.data_retorno && <p>Retorno previsto: {new Date(proc.data_retorno).toLocaleDateString('pt-BR')}</p>}
               {proc.observacoes && <p>{proc.observacoes}</p>}
             </div>
