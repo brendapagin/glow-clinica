@@ -2,7 +2,11 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import Login from './pages/Login';
 import Cadastro from './pages/Cadastro';
 import Usuarios from './pages/Usuarios';
+import Pacientes from './pages/Pacientes';
+import PacienteFicha from './pages/PacienteFicha';
 import { Protegida } from './components/RotaProtegida';
+
+const EQUIPE = ['admin', 'recepcao', 'profissional'];
 
 export default function App() {
   return (
@@ -17,7 +21,23 @@ export default function App() {
           </Protegida>
         }
       />
-      <Route path="/" element={<Navigate to="/usuarios" replace />} />
+      <Route
+        path="/pacientes"
+        element={
+          <Protegida papeisPermitidos={EQUIPE}>
+            <Pacientes />
+          </Protegida>
+        }
+      />
+      <Route
+        path="/pacientes/:id"
+        element={
+          <Protegida papeisPermitidos={EQUIPE}>
+            <PacienteFicha />
+          </Protegida>
+        }
+      />
+      <Route path="/" element={<Navigate to="/pacientes" replace />} />
       <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
   );
