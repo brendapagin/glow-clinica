@@ -207,15 +207,71 @@ select.select-papel { font-family: var(--fonte-corpo); padding: 6px; border: 1px
 }
 .tela-aviso h2 { font-family: var(--fonte-display); font-size: 28px; margin-bottom: 8px; }
 
-/* ---------- Navegação interna ---------- */
-.topo-esquerda { display: flex; align-items: center; gap: 28px; }
-.topo-nav { display: flex; gap: 18px; }
-.topo-nav a {
-  color: var(--creme-claro); text-decoration: none; font-size: 13px;
-  letter-spacing: 1px; text-transform: uppercase; opacity: 0.85;
-  border-bottom: 1px solid transparent; padding-bottom: 2px;
+/* ---------- Layout com sidebar fixa ---------- */
+.app-shell { display: flex; min-height: 100vh; }
+
+.sidebar {
+  width: 232px;
+  flex-shrink: 0;
+  background: var(--terracota);
+  color: var(--creme-claro);
+  display: flex;
+  flex-direction: column;
+  padding: 28px 0 20px;
+  position: sticky;
+  top: 0;
+  height: 100vh;
 }
-.topo-nav a:hover { opacity: 1; border-bottom-color: var(--creme-claro); }
+
+.sidebar-marca { padding: 0 24px 36px; }
+.sidebar-marca .flor-mini {
+  width: 30px; height: 30px; display: block; margin-bottom: 10px;
+  fill: none; stroke: var(--creme-claro); stroke-width: 2;
+  stroke-linecap: round; stroke-linejoin: round;
+}
+.sidebar-marca h1 {
+  font-family: var(--fonte-display); font-size: 22px; font-weight: 500;
+  letter-spacing: 5px; margin: 0;
+}
+
+.sidebar-nav { flex: 1; display: flex; flex-direction: column; gap: 4px; padding: 0 14px; }
+.sidebar-link {
+  display: flex; align-items: center; gap: 13px; padding: 12px 14px;
+  border-radius: 8px; color: var(--creme-claro); text-decoration: none;
+  font-size: 14px; opacity: 0.8; transition: background 0.2s, opacity 0.2s;
+}
+.sidebar-link:hover { opacity: 1; background: rgba(255,255,255,0.08); }
+.sidebar-link-ativo { opacity: 1; background: rgba(255,255,255,0.16); }
+
+.sidebar-rodape { padding: 16px 24px 0; margin-top: 12px; border-top: 1px solid rgba(255,255,255,0.15); }
+.sidebar-sair {
+  display: flex; align-items: center; gap: 10px; background: none; border: none;
+  color: var(--creme-claro); opacity: 0.75; font-family: var(--fonte-corpo);
+  font-size: 14px; cursor: pointer; padding: 14px 0 0; width: 100%;
+}
+.sidebar-sair:hover { opacity: 1; }
+
+.app-main { flex: 1; background: var(--creme); min-width: 0; }
+.app-main-conteudo { max-width: 1080px; margin: 0 auto; padding: 44px 40px; }
+.app-main-titulo { font-family: var(--fonte-display); font-size: 30px; font-weight: 500; margin: 0 0 28px; color: var(--marrom-tinta); }
+
+/* ---------- Tabela refinada ---------- */
+.tabela-refinada {
+  width: 100%; border-collapse: separate; border-spacing: 0;
+  background: var(--creme-claro); border-radius: 10px; overflow: hidden;
+  box-shadow: 0 1px 3px rgba(74, 63, 58, 0.07);
+}
+.tabela-refinada th {
+  text-align: left; padding: 16px 22px; font-size: 11px; letter-spacing: 1.5px;
+  text-transform: uppercase; color: var(--terracota-escuro); font-weight: 500;
+  border-bottom: 1px solid var(--nude);
+}
+.tabela-refinada td { padding: 16px 22px; font-size: 14px; border-bottom: 1px solid var(--nude); color: var(--marrom-tinta); }
+.tabela-refinada tr:last-child td { border-bottom: none; }
+.tabela-refinada tr.linha-clicavel { cursor: pointer; transition: background 0.15s; }
+.tabela-refinada tr.linha-clicavel:hover { background: var(--nude); }
+.celula-seta { text-align: right; color: var(--dourado); font-size: 16px; }
+
 
 /* ---------- Lista de pacientes ---------- */
 .lista-topo { display: flex; gap: 16px; margin-bottom: 24px; align-items: center; }
@@ -300,5 +356,12 @@ select.select-papel { font-family: var(--fonte-corpo); padding: 6px; border: 1px
   .tela { flex-direction: column; }
   .painel-marca { min-height: 220px; }
   .galeria-fotos { grid-template-columns: 1fr; }
-  .topo-esquerda { flex-direction: column; align-items: flex-start; gap: 10px; }
+  .app-shell { flex-direction: column; }
+  .sidebar { width: 100%; height: auto; position: static; flex-direction: row; align-items: center; padding: 14px 16px; }
+  .sidebar-marca { padding: 0 16px 0 0; }
+  .sidebar-marca h1 { font-size: 16px; }
+  .sidebar-nav { flex-direction: row; padding: 0; }
+  .sidebar-rodape { border-top: none; padding: 0 0 0 16px; margin-top: 0; }
+  .sidebar-sair span { display: none; }
+  .app-main-conteudo { padding: 24px 20px; }
 }
