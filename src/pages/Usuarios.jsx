@@ -1,11 +1,10 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { useAuth } from '../context/AuthContext';
+import { NavBarra } from '../components/NavBarra';
 
 const PAPEIS = ['pendente', 'admin', 'recepcao', 'profissional', 'paciente'];
 
 export default function Usuarios() {
-  const { sair } = useAuth();
   const [usuarios, setUsuarios] = useState([]);
   const [carregando, setCarregando] = useState(true);
   const [salvandoId, setSalvandoId] = useState(null);
@@ -39,10 +38,7 @@ export default function Usuarios() {
 
   return (
     <div>
-      <div className="topo">
-        <h1>GLOW — Usuários</h1>
-        <button onClick={sair}>Sair</button>
-      </div>
+      <NavBarra titulo="GLOW — Usuários" />
 
       <div className="conteudo">
         {carregando ? (
