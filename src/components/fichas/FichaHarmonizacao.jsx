@@ -6,7 +6,9 @@ const APLICACAO_VAZIA = {
   area_tratada: '', produto_id: '', quantidade_ml: '', unidade: 'ml', lote: '', validade: '', especificacao: '',
 };
 const FORM_VAZIO = {
-  data_aplicacao: '', data_retorno: '', observacoes: '', custo_operacional: '', aplicacoes: [{ ...APLICACAO_VAZIA }],
+  data_aplicacao: '', data_retorno: '', observacoes: '',
+  composicao_id: '', custo_operacional: '', valor_cobrado: '',
+  aplicacoes: [{ ...APLICACAO_VAZIA }],
 };
 
 function formatarMoeda(valor) {
@@ -28,17 +30,24 @@ function custoAplicacaoForm(ap, listaProdutos) {
   return produto.custo_unitario * ap.quantidade_ml;
 }
 
-function custoTotalProcedimento(procedimento) {
+function custoProdutosProcedimento(procedimento) {
   const aplicacoes = procedimento.harmonizacao_aplicacoes || [];
   const custos = aplicacoes.map(custoAplicacao).filter((c) => c !== null);
   if (custos.length === 0) return null;
   return custos.reduce((soma, c) => soma + c, 0);
 }
 
+function calcularTotalComposicao(linhas, valorBase) {
+  return (linhas || []).reduce((soma, l) => {
+    const valor = Number(l.valor) || 0;
+    return soma + (l.tipo === 'percentual' ? (valor / 100) * valorBase : valor);
+  }, 0);
+}
+
 export function FichaHarmonizacao({ pacienteId }) {
   const [procedimentos, setProcedimentos] = useState([]);
   const [produtos, setProdutos] = useState([]);
-  const [custoOperacionalSugerido, setCustoOperacionalSugerido] = useState(null);
+  const [composicoes, setComposicoes] = useState([]);
   const [form, setForm] = useState(FORM_VAZIO);
   const [mostrarForm, setMostrarForm] = useState(false);
   const [editandoId, setEditandoId] = useState(null);
@@ -55,12 +64,12 @@ export function FichaHarmonizacao({ pacienteId }) {
     const { data: prods } = await supabase.from('produtos').select('*').eq('ativo', true).order('nome');
     setProdutos(prods || []);
 
-    const { data: itensCusto } = await supabase.from('custos_operacionais').select('valor_mensal').eq('ativo', true);
-    const { data: config } = await supabase.from('configuracoes_custo').select('atendimentos_por_mes').limit(1).maybeSingle();
-    if (itensCusto && config && config.atendimentos_por_mes > 0) {
-      const totalMensal = itensCusto.reduce((soma, c) => soma + Number(c.valor_mensal || 0), 0);
-      setCustoOperacionalSugerido(totalMensal / config.atendimentos_por_mes);
-    }
+    const { data: composicoesData } = await supabase
+      .from('composicoes_custo')
+      .select('*, composicao_linhas(*)')
+      .eq('ativo', true)
+      .order('nome');
+    setComposicoes(composicoesData || []);
   }
 
   useEffect(() => { carregar(); }, [pacienteId]);
@@ -88,8 +97,14 @@ export function FichaHarmonizacao({ pacienteId }) {
     setForm((f) => ({ ...f, aplicacoes: f.aplicacoes.filter((_, i) => i !== index) }));
   }
 
+  function selecionarComposicao(composicaoId) {
+    const composicao = composicoes.find((c) => c.id === composicaoId);
+    const total = composicao ? calcularTotalComposicao(composicao.composicao_linhas, composicao.valor_base) : '';
+    setForm((f) => ({ ...f, composicao_id: composicaoId, custo_operacional: total !== '' ? total.toFixed(2) : '' }));
+  }
+
   function iniciarNovo() {
-    setForm({ ...FORM_VAZIO, custo_operacional: custoOperacionalSugerido ? custoOperacionalSugerido.toFixed(2) : '' });
+    setForm(FORM_VAZIO);
     setEditandoId(null);
     setMostrarForm(true);
   }
@@ -99,7 +114,9 @@ export function FichaHarmonizacao({ pacienteId }) {
       data_aplicacao: proc.data_aplicacao || '',
       data_retorno: proc.data_retorno || '',
       observacoes: proc.observacoes || '',
+      composicao_id: proc.composicao_id || '',
       custo_operacional: proc.custo_operacional ?? '',
+      valor_cobrado: proc.valor_cobrado ?? '',
       aplicacoes: (proc.harmonizacao_aplicacoes || []).length > 0
         ? proc.harmonizacao_aplicacoes.map((a) => ({
             area_tratada: a.area_tratada || '',
@@ -119,7 +136,32 @@ export function FichaHarmonizacao({ pacienteId }) {
   async function excluirProcedimento(id) {
     if (!confirm('Excluir este atendimento e todas as suas aplicações?')) return;
     await supabase.from('harmonizacao_procedimentos').delete().eq('id', id);
+    await supabase.from('contas_receber').delete().eq('origem_tipo', 'harmonizacao').eq('origem_id', id);
     carregar();
+  }
+
+  async function sincronizarContaReceber(procedimentoId, valor, dataRef) {
+    if (!valor || valor <= 0) return;
+    const { data: existente } = await supabase
+      .from('contas_receber')
+      .select('id')
+      .eq('origem_tipo', 'harmonizacao')
+      .eq('origem_id', procedimentoId)
+      .maybeSingle();
+
+    if (existente) {
+      await supabase.from('contas_receber').update({ valor, data_prevista: dataRef || null }).eq('id', existente.id);
+    } else {
+      await supabase.from('contas_receber').insert({
+        paciente_id: pacienteId,
+        origem_tipo: 'harmonizacao',
+        origem_id: procedimentoId,
+        descricao: 'Harmonização Facial',
+        valor,
+        data_prevista: dataRef || null,
+        status: 'pendente',
+      });
+    }
   }
 
   async function salvar(e) {
@@ -131,7 +173,9 @@ export function FichaHarmonizacao({ pacienteId }) {
       data_aplicacao: form.data_aplicacao || null,
       data_retorno: form.data_retorno || null,
       observacoes: form.observacoes,
+      composicao_id: form.composicao_id || null,
       custo_operacional: form.custo_operacional || null,
+      valor_cobrado: form.valor_cobrado || null,
     };
 
     let procedimentoId = editandoId;
@@ -161,8 +205,10 @@ export function FichaHarmonizacao({ pacienteId }) {
 
     if (aplicacoesParaSalvar.length > 0) {
       const { error } = await supabase.from('harmonizacao_aplicacoes').insert(aplicacoesParaSalvar);
-      if (error) { alert('Erro ao salvar aplicações: ' + error.message); }
+      if (error) alert('Erro ao salvar aplicações: ' + error.message);
     }
+
+    await sincronizarContaReceber(procedimentoId, Number(form.valor_cobrado) || 0, form.data_aplicacao);
 
     setSalvando(false);
     setMostrarForm(false);
@@ -246,31 +292,42 @@ export function FichaHarmonizacao({ pacienteId }) {
               + Adicionar outra aplicação
             </button>
 
+            <div className="campo">
+              <label>Composição de custo aplicada (opcional)</label>
+              <select value={form.composicao_id} onChange={(e) => selecionarComposicao(e.target.value)}>
+                <option value="">Nenhuma — preencher manualmente</option>
+                {composicoes.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
+              </select>
+              <p className="dica-texto" style={{ marginTop: 6 }}>Escolher uma composição preenche o custo operacional abaixo automaticamente (você pode ajustar).</p>
+            </div>
+
+            <div className="ficha-grid">
+              <div className="campo">
+                <label>Custo operacional deste atendimento (R$)</label>
+                <input type="number" step="0.01" value={form.custo_operacional} onChange={(e) => setForm({ ...form, custo_operacional: e.target.value })} />
+              </div>
+              <div className="campo">
+                <label>Valor cobrado da paciente (R$)</label>
+                <input type="number" step="0.01" value={form.valor_cobrado} onChange={(e) => setForm({ ...form, valor_cobrado: e.target.value })} />
+              </div>
+            </div>
+
             {(() => {
               const custoProdutosForm = form.aplicacoes
                 .map((ap) => custoAplicacaoForm(ap, produtos))
                 .filter((c) => c !== null)
                 .reduce((soma, c) => soma + c, 0);
-              const temCustoProdutos = form.aplicacoes.some((ap) => custoAplicacaoForm(ap, produtos) !== null);
               const custoOperacional = Number(form.custo_operacional) || 0;
-              return (temCustoProdutos || custoOperacional > 0) ? (
+              const valorCobrado = Number(form.valor_cobrado) || 0;
+              const custoTotal = custoProdutosForm + custoOperacional;
+              return (
                 <p className="dica-texto">
-                  Custo dos produtos: {formatarMoeda(custoProdutosForm)}
-                  {custoOperacional > 0 && ` · Custo operacional: ${formatarMoeda(custoOperacional)}`}
-                  {' · '}<strong>Custo total do atendimento: {formatarMoeda(custoProdutosForm + custoOperacional)}</strong>
+                  Custo dos produtos: {formatarMoeda(custoProdutosForm)} · Custo operacional: {formatarMoeda(custoOperacional)}
+                  {' · '}<strong>Custo total: {formatarMoeda(custoTotal)}</strong>
+                  {valorCobrado > 0 && <> · <strong>Lucro estimado: {formatarMoeda(valorCobrado - custoTotal)}</strong></>}
                 </p>
-              ) : null;
+              );
             })()}
-
-            <div className="campo">
-              <label>Custo operacional deste atendimento (R$)</label>
-              <input type="number" step="0.01" value={form.custo_operacional} onChange={(e) => setForm({ ...form, custo_operacional: e.target.value })} />
-              {custoOperacionalSugerido !== null && (
-                <p className="dica-texto" style={{ marginTop: 6 }}>
-                  Sugestão com base na sua composição de custos: {formatarMoeda(custoOperacionalSugerido)} (ajustável)
-                </p>
-              )}
-            </div>
 
             <div className="campo">
               <label>Observações gerais</label>
@@ -313,15 +370,16 @@ export function FichaHarmonizacao({ pacienteId }) {
                 );
               })}
               {(() => {
-                const custoProdutos = custoTotalProcedimento(proc);
+                const custoProdutos = custoProdutosProcedimento(proc) || 0;
                 const custoOperacional = Number(proc.custo_operacional) || 0;
-                if (custoProdutos === null && custoOperacional === 0) return null;
-                const total = (custoProdutos || 0) + custoOperacional;
+                const valorCobrado = Number(proc.valor_cobrado) || 0;
+                const custoTotal = custoProdutos + custoOperacional;
+                if (custoTotal === 0 && valorCobrado === 0) return null;
                 return (
                   <p className="registro-custo-total">
-                    Custo dos produtos: {formatarMoeda(custoProdutos || 0)}
-                    {custoOperacional > 0 && ` · Custo operacional: ${formatarMoeda(custoOperacional)}`}
-                    {' · '}<strong>Total: {formatarMoeda(total)}</strong>
+                    Custo dos produtos: {formatarMoeda(custoProdutos)} · Custo operacional: {formatarMoeda(custoOperacional)}
+                    {' · '}<strong>Total: {formatarMoeda(custoTotal)}</strong>
+                    {valorCobrado > 0 && <> · Cobrado: {formatarMoeda(valorCobrado)} · <strong>Lucro: {formatarMoeda(valorCobrado - custoTotal)}</strong></>}
                   </p>
                 );
               })()}
