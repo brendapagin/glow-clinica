@@ -3,7 +3,7 @@ import { supabase } from '../../lib/supabase';
 import { GaleriaFotos } from '../GaleriaFotos';
 
 const APLICACAO_VAZIA = {
-  area_tratada: '', produto_id: '', quantidade_ml: '', lote: '', validade: '', especificacao: '',
+  area_tratada: '', produto_id: '', quantidade_ml: '', unidade: 'ml', lote: '', validade: '', especificacao: '',
 };
 const FORM_VAZIO = {
   data_aplicacao: '', data_retorno: '', observacoes: '', aplicacoes: [{ ...APLICACAO_VAZIA }],
@@ -43,6 +43,7 @@ export function FichaHarmonizacao({ pacienteId }) {
     const produto = produtos.find((p) => p.id === produtoId);
     atualizarAplicacao(index, 'produto_id', produtoId);
     if (produto?.especificacao) atualizarAplicacao(index, 'especificacao', produto.especificacao);
+    if (produto?.unidade) atualizarAplicacao(index, 'unidade', produto.unidade);
   }
 
   function adicionarLinha() {
@@ -69,6 +70,7 @@ export function FichaHarmonizacao({ pacienteId }) {
             area_tratada: a.area_tratada || '',
             produto_id: a.produto_id || '',
             quantidade_ml: a.quantidade_ml ?? '',
+            unidade: a.unidade || 'ml',
             lote: a.lote || '',
             validade: a.validade || '',
             especificacao: a.especificacao || '',
@@ -115,6 +117,7 @@ export function FichaHarmonizacao({ pacienteId }) {
         area_tratada: a.area_tratada,
         produto_id: a.produto_id || null,
         quantidade_ml: a.quantidade_ml || null,
+        unidade: a.unidade || 'ml',
         lote: a.lote,
         validade: a.validade || null,
         especificacao: a.especificacao,
@@ -171,8 +174,16 @@ export function FichaHarmonizacao({ pacienteId }) {
                   </select>
                 </div>
                 <div className="campo">
-                  <label>Quantidade (ml)</label>
-                  <input type="number" step="0.1" value={ap.quantidade_ml} onChange={(e) => atualizarAplicacao(index, 'quantidade_ml', e.target.value)} />
+                  <label>Quantidade</label>
+                  <div className="campo-composto">
+                    <input type="number" step="0.1" value={ap.quantidade_ml} onChange={(e) => atualizarAplicacao(index, 'quantidade_ml', e.target.value)} />
+                    <select value={ap.unidade} onChange={(e) => atualizarAplicacao(index, 'unidade', e.target.value)}>
+                      <option value="ml">ml</option>
+                      <option value="mg">mg</option>
+                      <option value="ui">UI</option>
+                      <option value="unidade">un.</option>
+                    </select>
+                  </div>
                 </div>
                 <div className="campo">
                   <label>Lote</label>
@@ -227,7 +238,7 @@ export function FichaHarmonizacao({ pacienteId }) {
                 <p key={a.id}>
                   {a.area_tratada}
                   {a.produtos?.nome && ` · ${a.produtos.nome}`}
-                  {a.quantidade_ml && ` · ${a.quantidade_ml}ml`}
+                  {a.quantidade_ml && ` · ${a.quantidade_ml}${a.unidade || 'ml'}`}
                   {a.lote && ` · Lote ${a.lote}`}
                   {a.validade && ` · Val. ${new Date(a.validade).toLocaleDateString('pt-BR')}`}
                 </p>
