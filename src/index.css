@@ -203,6 +203,22 @@ select.select-papel { font-family: var(--fonte-corpo); padding: 6px; border: 1px
   font-size: 13px; color: var(--terracota-escuro); text-decoration: underline; cursor: pointer;
 }
 
+/* ---------- Filtros (busca, período) ---------- */
+.filtros-linha { display: flex; gap: 16px; align-items: center; margin-bottom: 20px; flex-wrap: wrap; }
+.filtro-datas { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--terracota-escuro); }
+.filtro-datas input {
+  padding: 10px; border: 1px solid var(--nude); border-radius: 4px;
+  font-family: var(--fonte-corpo); background: var(--creme-claro); font-size: 14px;
+}
+
+/* ---------- Barra de seleção com total ---------- */
+.selecao-resumo {
+  display: flex; justify-content: space-between; align-items: center;
+  background: var(--nude); padding: 12px 18px; border-radius: 6px; margin-bottom: 16px; font-size: 14px;
+}
+.selecao-resumo button { background: none; border: none; color: var(--terracota-escuro); text-decoration: underline; cursor: pointer; font-size: 13px; font-family: var(--fonte-corpo); }
+.checkbox-linha { width: auto !important; }
+
 .botao-salvar {
   background: var(--terracota); color: white; border: none; padding: 6px 14px;
   border-radius: 2px; font-size: 12px; cursor: pointer; font-family: var(--fonte-corpo);
