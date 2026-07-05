@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Users, ShieldCheck, LogOut, Sparkles, Package, Calculator } from 'lucide-react';
+import { Users, ShieldCheck, LogOut, Sparkles, Package, Calculator, Receipt, HandCoins } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 const ITENS_NAV = [
@@ -7,6 +7,8 @@ const ITENS_NAV = [
   { to: '/servicos', label: 'Serviços', Icone: Sparkles, tela: 'servicos' },
   { to: '/produtos', label: 'Produtos', Icone: Package, tela: 'produtos' },
   { to: '/custos', label: 'Custos', Icone: Calculator, tela: 'custos' },
+  { to: '/contas-pagar', label: 'Contas a Pagar', Icone: Receipt, tela: 'contas_pagar' },
+  { to: '/contas-receber', label: 'Contas a Receber', Icone: HandCoins, tela: 'contas_receber' },
   { to: '/usuarios', label: 'Usuários', Icone: ShieldCheck, tela: 'usuarios' },
 ];
 
