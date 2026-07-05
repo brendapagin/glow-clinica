@@ -1,69 +1,14 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8">
-<title>GLOW - Teste de Conexão</title>
-<style>
-  body { font-family: system-ui, sans-serif; background: #F5F0E8; padding: 40px; }
-  .card { max-width: 480px; margin: 0 auto; background: white; border-radius: 12px;
-          padding: 32px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); }
-  h1 { color: #4a6a5a; font-size: 22px; }
-  input { width: 100%; padding: 10px; margin: 6px 0 14px; border: 1px solid #ddd;
-          border-radius: 6px; box-sizing: border-box; }
-  button { background: #C6A15B; color: white; border: none; padding: 10px 20px;
-           border-radius: 6px; cursor: pointer; font-size: 14px; }
-  button:hover { opacity: 0.9; }
-  #status { margin-top: 16px; padding: 12px; border-radius: 6px; font-size: 14px; display: none; }
-  .ok { background: #e3f5e8; color: #1e7a3d; display: block !important; }
-  .erro { background: #fde8e8; color: #a33; display: block !important; }
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GLOW — Sistema</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
 </head>
 <body>
-  <div class="card">
-    <h1>GLOW — Teste de Conexão Supabase</h1>
-    <p style="color:#888; font-size:13px;">Cole a Project URL e a anon key do seu projeto Supabase abaixo e clique em testar.</p>
-
-    <label>Project URL</label>
-    <input id="url" placeholder="https://xxxxx.supabase.co" />
-
-    <label>Anon Public Key</label>
-    <input id="key" placeholder="eyJhbGciOi..." />
-
-    <button onclick="testar()">Testar Conexão</button>
-
-    <div id="status"></div>
-  </div>
-
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script>
-    async function testar() {
-      const url = document.getElementById('url').value.trim();
-      const key = document.getElementById('key').value.trim();
-      const statusEl = document.getElementById('status');
-
-      if (!url || !key) {
-        statusEl.className = 'erro';
-        statusEl.textContent = 'Preencha URL e chave antes de testar.';
-        return;
-      }
-
-      try {
-        const client = supabase.createClient(url, key);
-        // Consulta simples que só depende de auth estar configurado — sempre responde algo
-        const { error } = await client.auth.getSession();
-
-        if (error) {
-          statusEl.className = 'erro';
-          statusEl.textContent = '❌ Erro: ' + error.message;
-        } else {
-          statusEl.className = 'ok';
-          statusEl.textContent = '✅ Conexão com Supabase funcionando! Projeto respondeu normalmente.';
-        }
-      } catch (e) {
-        statusEl.className = 'erro';
-        statusEl.textContent = '❌ Erro de conexão: ' + e.message;
-      }
-    }
-  </script>
+  <div id="root"></div>
+  <script type="module" src="/src/main.jsx"></script>
 </body>
 </html>
