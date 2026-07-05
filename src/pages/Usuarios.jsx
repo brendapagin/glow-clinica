@@ -3,7 +3,13 @@ import { supabase } from '../lib/supabase';
 import { Layout } from '../components/Layout';
 
 const PAPEIS = ['pendente', 'admin', 'recepcao', 'profissional', 'paciente'];
-const NOVO_VAZIO = { nome: '', email: '', senha: '', papel: 'recepcao' };
+const TELAS = [
+  { valor: 'pacientes', label: 'Pacientes' },
+  { valor: 'servicos', label: 'Serviços' },
+  { valor: 'produtos', label: 'Produtos' },
+  { valor: 'usuarios', label: 'Usuários' },
+];
+const NOVO_VAZIO = { nome: '', email: '', senha: '', papel: 'recepcao', permissoes: [] };
 
 export default function Usuarios() {
   const [usuarios, setUsuarios] = useState([]);
@@ -19,7 +25,7 @@ export default function Usuarios() {
     setCarregando(true);
     const { data } = await supabase
       .from('usuarios')
-      .select('id, nome, email, papel, ativo, criado_em')
+      .select('id, nome, email, papel, ativo, permissoes, criado_em')
       .order('criado_em', { ascending: false });
     setUsuarios(data || []);
     setCarregando(false);
@@ -31,15 +37,31 @@ export default function Usuarios() {
     setUsuarios((lista) => lista.map((u) => (u.id === id ? { ...u, [campo]: valor } : u)));
   }
 
+  function alternarPermissaoLocal(id, tela, marcado) {
+    setUsuarios((lista) => lista.map((u) => {
+      if (u.id !== id) return u;
+      const atuais = u.permissoes || [];
+      const permissoes = marcado ? [...atuais, tela] : atuais.filter((t) => t !== tela);
+      return { ...u, permissoes };
+    }));
+  }
+
   async function salvar(id) {
     const usuario = usuarios.find((u) => u.id === id);
     setSalvandoId(id);
     const { error } = await supabase
       .from('usuarios')
-      .update({ papel: usuario.papel, ativo: usuario.ativo })
+      .update({ papel: usuario.papel, ativo: usuario.ativo, permissoes: usuario.permissoes || [] })
       .eq('id', id);
     setSalvandoId(null);
     if (error) alert('Erro ao salvar: ' + error.message);
+  }
+
+  function alternarPermissaoNovo(tela, marcado) {
+    setNovo((n) => ({
+      ...n,
+      permissoes: marcado ? [...n.permissoes, tela] : n.permissoes.filter((t) => t !== tela),
+    }));
   }
 
   async function criarUsuario(e) {
@@ -98,10 +120,27 @@ export default function Usuarios() {
               </select>
             </div>
           </div>
+
+          <div className="campo">
+            <label>Telas permitidas</label>
+            <div className="checkboxes-telas">
+              {TELAS.map((t) => (
+                <label key={t.valor} className="checkbox-tela">
+                  <input
+                    type="checkbox"
+                    checked={novo.permissoes.includes(t.valor)}
+                    onChange={(e) => alternarPermissaoNovo(t.valor, e.target.checked)}
+                  />
+                  {t.label}
+                </label>
+              ))}
+            </div>
+            <p className="dica-texto">Ignorado se o papel for "admin" — admin sempre tem acesso total.</p>
+          </div>
+
           <button type="submit" className="botao" disabled={criando} style={{ maxWidth: 220 }}>
             {criando ? 'Criando...' : 'Criar usuário'}
           </button>
-          <p className="dica-texto">A pessoa já entra ativa, com o papel escolhido — sem precisar de aprovação.</p>
         </form>
       )}
 
@@ -114,8 +153,8 @@ export default function Usuarios() {
               <th>Nome</th>
               <th>E-mail</th>
               <th>Papel</th>
+              <th>Telas permitidas</th>
               <th>Status</th>
-              <th>Criado em</th>
               <th></th>
             </tr>
           </thead>
@@ -136,6 +175,24 @@ export default function Usuarios() {
                   </select>
                 </td>
                 <td>
+                  {u.papel === 'admin' ? (
+                    <span className="acesso-full">Acesso total</span>
+                  ) : (
+                    <div className="checkboxes-telas">
+                      {TELAS.map((t) => (
+                        <label key={t.valor} className="checkbox-tela">
+                          <input
+                            type="checkbox"
+                            checked={(u.permissoes || []).includes(t.valor)}
+                            onChange={(e) => alternarPermissaoLocal(u.id, t.valor, e.target.checked)}
+                          />
+                          {t.label}
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </td>
+                <td>
                   <span
                     className={`status-pill ${u.ativo ? 'ativo' : 'inativo'}`}
                     onClick={() => atualizarLocal(u.id, 'ativo', !u.ativo)}
@@ -143,7 +200,6 @@ export default function Usuarios() {
                     {u.ativo ? 'Ativo' : 'Pendente'}
                   </span>
                 </td>
-                <td>{new Date(u.criado_em).toLocaleDateString('pt-BR')}</td>
                 <td>
                   <button className="botao-salvar" onClick={() => salvar(u.id)}>
                     {salvandoId === u.id ? 'Salvando...' : 'Salvar'}

@@ -31,10 +31,12 @@ export default function PacienteFicha() {
 
     const { data: vinculos } = await supabase
       .from('paciente_servicos')
-      .select('id, data_inicio, servicos(id, nome, slug)')
+      .select('id, data_inicio, servicos(id, nome, slug, ativo)')
       .eq('paciente_id', id);
 
-    const ativos = (vinculos || []).map((v) => v.servicos);
+    const ativos = (vinculos || [])
+      .map((v) => v.servicos)
+      .filter((s) => s && s.ativo);
     setServicosAtivos(ativos);
     if (ativos.length > 0 && !abaAtual) setAbaAtual(ativos[0].slug);
 
