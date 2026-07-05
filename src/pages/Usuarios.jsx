@@ -10,6 +10,7 @@ const TELAS = [
   { valor: 'custos', label: 'Custos' },
   { valor: 'contas_pagar', label: 'Contas a Pagar' },
   { valor: 'contas_receber', label: 'Contas a Receber' },
+  { valor: 'caixa', label: 'Caixa' },
   { valor: 'usuarios', label: 'Usuários' },
 ];
 const NOVO_VAZIO = { nome: '', email: '', senha: '', papel: 'recepcao', permissoes: [] };
