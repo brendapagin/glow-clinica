@@ -24,6 +24,11 @@ export default function Caixa() {
   const [mostrarForm, setMostrarForm] = useState(false);
   const [salvando, setSalvando] = useState(false);
 
+  const [busca, setBusca] = useState('');
+  const [dataInicio, setDataInicio] = useState('');
+  const [dataFim, setDataFim] = useState('');
+  const [selecionados, setSelecionados] = useState(new Set());
+
   async function carregar() {
     setCarregando(true);
 
@@ -89,15 +94,34 @@ export default function Caixa() {
 
   const movimentos = [
     ...lancamentos.map((l) => ({
-      data: l.data, tipo: l.tipo, descricao: l.descricao, valor: Number(l.valor || 0), origem: 'manual', id: l.id,
+      id: `manual-${l.id}`, data: l.data, tipo: l.tipo, descricao: l.descricao, valor: Number(l.valor || 0), origem: 'manual', origemId: l.id,
     })),
     ...contasReceber.flatMap((c) => (c.contas_receber_baixas || []).map((b) => ({
-      data: b.data, tipo: 'entrada', descricao: c.descricao + (c.pacientes?.nome ? ` — ${c.pacientes.nome}` : ''), valor: Number(b.valor || 0), origem: 'contas_receber',
+      id: `cr-${b.id}`, data: b.data, tipo: 'entrada', descricao: c.descricao + (c.pacientes?.nome ? ` — ${c.pacientes.nome}` : ''), valor: Number(b.valor || 0), origem: 'contas_receber',
     }))),
     ...contasPagar.filter((c) => c.status === 'pago').map((c) => ({
-      data: c.pago_em, tipo: 'saida', descricao: c.descricao, valor: Number(c.valor || 0), origem: 'contas_pagar',
+      id: `cp-${c.id}`, data: c.pago_em, tipo: 'saida', descricao: c.descricao, valor: Number(c.valor || 0), origem: 'contas_pagar',
     })),
   ].sort((a, b) => (b.data || '').localeCompare(a.data || ''));
+
+  const movimentosFiltrados = movimentos.filter((m) => {
+    if (busca && !m.descricao.toLowerCase().includes(busca.toLowerCase())) return false;
+    if (dataInicio && (!m.data || m.data < dataInicio)) return false;
+    if (dataFim && (!m.data || m.data > dataFim)) return false;
+    return true;
+  });
+
+  const totalSelecionado = movimentosFiltrados
+    .filter((m) => selecionados.has(m.id))
+    .reduce((s, m) => s + (m.tipo === 'entrada' ? m.valor : -m.valor), 0);
+
+  function alternarSelecionado(id) {
+    setSelecionados((atual) => {
+      const novo = new Set(atual);
+      novo.has(id) ? novo.delete(id) : novo.add(id);
+      return novo;
+    });
+  }
 
   return (
     <Layout titulo="Caixa">
@@ -169,11 +193,43 @@ export default function Caixa() {
           )}
 
           <h3 style={{ fontFamily: 'var(--fonte-display)', fontSize: 22 }}>Movimentações</h3>
+
+          <div className="filtros-linha">
+            <input className="busca" style={{ maxWidth: 280 }} placeholder="Buscar por descrição..." value={busca} onChange={(e) => setBusca(e.target.value)} />
+            <div className="filtro-datas">
+              <span>De</span>
+              <input type="date" value={dataInicio} onChange={(e) => setDataInicio(e.target.value)} />
+              <span>até</span>
+              <input type="date" value={dataFim} onChange={(e) => setDataFim(e.target.value)} />
+            </div>
+          </div>
+
+          {selecionados.size > 0 && (
+            <div className="selecao-resumo">
+              <span>{selecionados.size} movimentação(ões) selecionada(s) · Total: <strong>{formatarMoeda(totalSelecionado)}</strong></span>
+              <button onClick={() => setSelecionados(new Set())}>Limpar seleção</button>
+            </div>
+          )}
+
           <table className="tabela-refinada">
-            <thead><tr><th>Data</th><th>Tipo</th><th>Descrição</th><th>Valor</th><th></th></tr></thead>
+            <thead>
+              <tr>
+                <th><input type="checkbox" className="checkbox-linha" checked={movimentosFiltrados.length > 0 && movimentosFiltrados.every((m) => selecionados.has(m.id))} onChange={() => {
+                  const idsVisiveis = movimentosFiltrados.map((m) => m.id);
+                  const todosMarcados = idsVisiveis.every((id) => selecionados.has(id));
+                  setSelecionados((atual) => {
+                    const novo = new Set(atual);
+                    idsVisiveis.forEach((id) => (todosMarcados ? novo.delete(id) : novo.add(id)));
+                    return novo;
+                  });
+                }} /></th>
+                <th>Data</th><th>Tipo</th><th>Descrição</th><th>Valor</th><th></th>
+              </tr>
+            </thead>
             <tbody>
-              {movimentos.map((m, i) => (
-                <tr key={i}>
+              {movimentosFiltrados.map((m) => (
+                <tr key={m.id}>
+                  <td><input type="checkbox" className="checkbox-linha" checked={selecionados.has(m.id)} onChange={() => alternarSelecionado(m.id)} /></td>
                   <td>{formatarData(m.data)}</td>
                   <td>
                     <span className={`status-pill ${m.tipo === 'entrada' ? 'ativo' : 'inativo'}`}>
@@ -187,8 +243,8 @@ export default function Caixa() {
                   <td className="celula-acoes">
                     {m.origem === 'manual' ? (
                       <>
-                        <button className="botao-secundario" onClick={() => iniciarEdicao(lancamentos.find((l) => l.id === m.id))}>Editar</button>
-                        <button className="botao-secundario" onClick={() => excluir(m.id)}>Excluir</button>
+                        <button className="botao-secundario" onClick={() => iniciarEdicao(lancamentos.find((l) => l.id === m.origemId))}>Editar</button>
+                        <button className="botao-secundario" onClick={() => excluir(m.origemId)}>Excluir</button>
                       </>
                     ) : (
                       <span className="dica-texto" style={{ margin: 0 }}>
@@ -198,7 +254,7 @@ export default function Caixa() {
                   </td>
                 </tr>
               ))}
-              {movimentos.length === 0 && <tr><td colSpan={5}>Nenhuma movimentação registrada ainda.</td></tr>}
+              {movimentosFiltrados.length === 0 && <tr><td colSpan={6}>Nenhuma movimentação encontrada.</td></tr>}
             </tbody>
           </table>
         </>

@@ -23,6 +23,10 @@ export default function ContasPagar() {
   const [salvando, setSalvando] = useState(false);
   const [carregando, setCarregando] = useState(true);
   const [filtro, setFiltro] = useState('todas');
+  const [busca, setBusca] = useState('');
+  const [dataInicio, setDataInicio] = useState('');
+  const [dataFim, setDataFim] = useState('');
+  const [selecionados, setSelecionados] = useState(new Set());
 
   async function carregar() {
     setCarregando(true);
@@ -97,8 +101,34 @@ export default function ContasPagar() {
     carregar();
   }
 
-  const filtradas = contas.filter((c) => filtro === 'todas' || c.status === filtro);
+  const filtradas = contas.filter((c) => {
+    if (filtro !== 'todas' && c.status !== filtro) return false;
+    if (busca && !c.descricao.toLowerCase().includes(busca.toLowerCase())) return false;
+    if (dataInicio && (!c.vencimento || c.vencimento < dataInicio)) return false;
+    if (dataFim && (!c.vencimento || c.vencimento > dataFim)) return false;
+    return true;
+  });
+
   const totalPendente = contas.filter((c) => c.status === 'pendente').reduce((s, c) => s + Number(c.valor || 0), 0);
+  const totalSelecionado = filtradas.filter((c) => selecionados.has(c.id)).reduce((s, c) => s + Number(c.valor || 0), 0);
+
+  function alternarSelecionado(id) {
+    setSelecionados((atual) => {
+      const novo = new Set(atual);
+      novo.has(id) ? novo.delete(id) : novo.add(id);
+      return novo;
+    });
+  }
+
+  function alternarTodosVisiveis() {
+    const idsVisiveis = filtradas.map((c) => c.id);
+    const todosMarcados = idsVisiveis.every((id) => selecionados.has(id));
+    setSelecionados((atual) => {
+      const novo = new Set(atual);
+      idsVisiveis.forEach((id) => (todosMarcados ? novo.delete(id) : novo.add(id)));
+      return novo;
+    });
+  }
 
   return (
     <Layout titulo="Contas a Pagar">
@@ -158,14 +188,37 @@ export default function ContasPagar() {
         <button className={`aba ${filtro === 'pago' ? 'aba-ativa' : ''}`} onClick={() => setFiltro('pago')}>Pagas</button>
       </div>
 
+      <div className="filtros-linha">
+        <input className="busca" style={{ maxWidth: 280 }} placeholder="Buscar por descrição..." value={busca} onChange={(e) => setBusca(e.target.value)} />
+        <div className="filtro-datas">
+          <span>Vencimento de</span>
+          <input type="date" value={dataInicio} onChange={(e) => setDataInicio(e.target.value)} />
+          <span>até</span>
+          <input type="date" value={dataFim} onChange={(e) => setDataFim(e.target.value)} />
+        </div>
+      </div>
+
+      {selecionados.size > 0 && (
+        <div className="selecao-resumo">
+          <span>{selecionados.size} conta(s) selecionada(s) · Total: <strong>{formatarMoeda(totalSelecionado)}</strong></span>
+          <button onClick={() => setSelecionados(new Set())}>Limpar seleção</button>
+        </div>
+      )}
+
       {carregando ? (
         <p>Carregando...</p>
       ) : (
         <table className="tabela-refinada">
-          <thead><tr><th>Descrição</th><th>Valor</th><th>Vencimento</th><th>Status</th><th></th></tr></thead>
+          <thead>
+            <tr>
+              <th><input type="checkbox" className="checkbox-linha" checked={filtradas.length > 0 && filtradas.every((c) => selecionados.has(c.id))} onChange={alternarTodosVisiveis} /></th>
+              <th>Descrição</th><th>Valor</th><th>Vencimento</th><th>Status</th><th></th>
+            </tr>
+          </thead>
           <tbody>
             {filtradas.map((c) => (
               <tr key={c.id}>
+                <td><input type="checkbox" className="checkbox-linha" checked={selecionados.has(c.id)} onChange={() => alternarSelecionado(c.id)} /></td>
                 <td>{c.descricao}</td>
                 <td>{formatarMoeda(c.valor)}</td>
                 <td>{c.vencimento ? new Date(c.vencimento).toLocaleDateString('pt-BR') : '—'}</td>
@@ -181,7 +234,7 @@ export default function ContasPagar() {
                 </td>
               </tr>
             ))}
-            {filtradas.length === 0 && <tr><td colSpan={5}>Nenhuma conta encontrada.</td></tr>}
+            {filtradas.length === 0 && <tr><td colSpan={6}>Nenhuma conta encontrada.</td></tr>}
           </tbody>
         </table>
       )}

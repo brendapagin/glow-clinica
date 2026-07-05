@@ -25,6 +25,10 @@ export default function ContasReceber() {
   const [salvando, setSalvando] = useState(false);
   const [carregando, setCarregando] = useState(true);
   const [filtro, setFiltro] = useState('todas');
+  const [busca, setBusca] = useState('');
+  const [dataInicio, setDataInicio] = useState('');
+  const [dataFim, setDataFim] = useState('');
+  const [selecionados, setSelecionados] = useState(new Set());
 
   const [baixaAbertaId, setBaixaAbertaId] = useState(null);
   const [valorBaixa, setValorBaixa] = useState('');
@@ -121,8 +125,27 @@ export default function ContasReceber() {
     carregar();
   }
 
-  const filtradas = contas.filter((c) => filtro === 'todas' || c.status === filtro);
+  const filtradas = contas.filter((c) => {
+    if (filtro !== 'todas' && c.status !== filtro) return false;
+    if (busca) {
+      const alvo = (c.descricao + ' ' + (c.pacientes?.nome || '')).toLowerCase();
+      if (!alvo.includes(busca.toLowerCase())) return false;
+    }
+    if (dataInicio && (!c.data_prevista || c.data_prevista < dataInicio)) return false;
+    if (dataFim && (!c.data_prevista || c.data_prevista > dataFim)) return false;
+    return true;
+  });
+
   const totalPendente = contas.filter((c) => c.status !== 'recebido').reduce((s, c) => s + (Number(c.valor || 0) - recebidoDaConta(c)), 0);
+  const totalSelecionado = filtradas.filter((c) => selecionados.has(c.id)).reduce((s, c) => s + Number(c.valor || 0), 0);
+
+  function alternarSelecionado(id) {
+    setSelecionados((atual) => {
+      const novo = new Set(atual);
+      novo.has(id) ? novo.delete(id) : novo.add(id);
+      return novo;
+    });
+  }
 
   return (
     <Layout titulo="Contas a Receber">
@@ -179,6 +202,23 @@ export default function ContasReceber() {
         <button className={`aba ${filtro === 'recebido' ? 'aba-ativa' : ''}`} onClick={() => setFiltro('recebido')}>Recebidas</button>
       </div>
 
+      <div className="filtros-linha">
+        <input className="busca" style={{ maxWidth: 280 }} placeholder="Buscar por descrição ou paciente..." value={busca} onChange={(e) => setBusca(e.target.value)} />
+        <div className="filtro-datas">
+          <span>Previsto de</span>
+          <input type="date" value={dataInicio} onChange={(e) => setDataInicio(e.target.value)} />
+          <span>até</span>
+          <input type="date" value={dataFim} onChange={(e) => setDataFim(e.target.value)} />
+        </div>
+      </div>
+
+      {selecionados.size > 0 && (
+        <div className="selecao-resumo">
+          <span>{selecionados.size} conta(s) selecionada(s) · Total: <strong>{formatarMoeda(totalSelecionado)}</strong></span>
+          <button onClick={() => setSelecionados(new Set())}>Limpar seleção</button>
+        </div>
+      )}
+
       {carregando ? (
         <p>Carregando...</p>
       ) : (
@@ -190,7 +230,10 @@ export default function ContasReceber() {
             return (
               <div className="registro-card" key={conta.id}>
                 <div className="registro-topo">
-                  <strong>{conta.descricao} {conta.pacientes?.nome && `— ${conta.pacientes.nome}`}</strong>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <input type="checkbox" className="checkbox-linha" checked={selecionados.has(conta.id)} onChange={() => alternarSelecionado(conta.id)} />
+                    <strong>{conta.descricao} {conta.pacientes?.nome && `— ${conta.pacientes.nome}`}</strong>
+                  </div>
                   <div className="registro-topo-direita">
                     <span className={`status-pill ${conta.status === 'recebido' ? 'ativo' : conta.status === 'parcial' ? 'parcial' : 'inativo'}`}>
                       {conta.status === 'recebido' ? 'Recebido' : conta.status === 'parcial' ? 'Parcial' : 'Pendente'}
