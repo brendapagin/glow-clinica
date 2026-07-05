@@ -125,6 +125,23 @@ body {
   transition: border-color 0.3s;
 }
 
+.campo textarea {
+  width: 100%;
+  border: 1px solid var(--nude);
+  border-radius: 6px;
+  background: var(--creme-claro);
+  padding: 12px 14px;
+  font-family: var(--fonte-corpo);
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--marrom-tinta);
+  resize: vertical;
+}
+.campo textarea:focus { outline: none; border-color: var(--dourado); }
+
+.campo-cabecalho { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.campo-cabecalho label { margin: 0; }
+
 .campo input:focus, .campo select:focus {
   outline: none;
   border-bottom: 1px solid var(--dourado);
