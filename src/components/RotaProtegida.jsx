@@ -1,9 +1,10 @@
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
-// Uso: <Protegida papeisPermitidos={['admin']}><Usuarios /></Protegida>
-// Sem "papeisPermitidos", qualquer usuário ativo e logado pode acessar.
-export function Protegida({ children, papeisPermitidos }) {
+// Uso: <Protegida telaRequerida="pacientes">...</Protegida>
+// Admin sempre tem acesso total. Para os demais, verifica se a tela
+// está na lista de permissões do usuário.
+export function Protegida({ children, telaRequerida }) {
   const { session, perfil, carregando } = useAuth();
 
   if (carregando) {
@@ -23,7 +24,9 @@ export function Protegida({ children, papeisPermitidos }) {
     );
   }
 
-  if (papeisPermitidos && !papeisPermitidos.includes(perfil.papel)) {
+  const temAcesso = !telaRequerida || perfil.papel === 'admin' || (perfil.permissoes || []).includes(telaRequerida);
+
+  if (!temAcesso) {
     return (
       <div className="tela-aviso">
         <h2>Acesso restrito</h2>

@@ -3,10 +3,10 @@ import { Users, ShieldCheck, LogOut, Sparkles, Package } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 const ITENS_NAV = [
-  { to: '/pacientes', label: 'Pacientes', Icone: Users, papeis: ['admin', 'recepcao', 'profissional'] },
-  { to: '/servicos', label: 'Serviços', Icone: Sparkles, papeis: ['admin'] },
-  { to: '/produtos', label: 'Produtos', Icone: Package, papeis: ['admin', 'profissional'] },
-  { to: '/usuarios', label: 'Usuários', Icone: ShieldCheck, papeis: ['admin'] },
+  { to: '/pacientes', label: 'Pacientes', Icone: Users, tela: 'pacientes' },
+  { to: '/servicos', label: 'Serviços', Icone: Sparkles, tela: 'servicos' },
+  { to: '/produtos', label: 'Produtos', Icone: Package, tela: 'produtos' },
+  { to: '/usuarios', label: 'Usuários', Icone: ShieldCheck, tela: 'usuarios' },
 ];
 
 export function Layout({ titulo, children }) {
@@ -38,7 +38,7 @@ export function Layout({ titulo, children }) {
         </div>
 
         <nav className="sidebar-nav">
-          {ITENS_NAV.filter((item) => !perfil || item.papeis.includes(perfil.papel)).map(({ to, label, Icone }) => (
+          {ITENS_NAV.filter((item) => perfil?.papel === 'admin' || perfil?.permissoes?.includes(item.tela)).map(({ to, label, Icone }) => (
             <Link
               key={to}
               to={to}
