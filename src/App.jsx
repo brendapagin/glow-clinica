@@ -7,6 +7,8 @@ import PacienteFicha from './pages/PacienteFicha';
 import Servicos from './pages/Servicos';
 import Produtos from './pages/Produtos';
 import Custos from './pages/Custos';
+import ContasPagar from './pages/ContasPagar';
+import ContasReceber from './pages/ContasReceber';
 import { Protegida } from './components/RotaProtegida';
 
 export default function App() {
@@ -59,6 +61,22 @@ export default function App() {
         element={
           <Protegida telaRequerida="custos">
             <Custos />
+          </Protegida>
+        }
+      />
+      <Route
+        path="/contas-pagar"
+        element={
+          <Protegida telaRequerida="contas_pagar">
+            <ContasPagar />
+          </Protegida>
+        }
+      />
+      <Route
+        path="/contas-receber"
+        element={
+          <Protegida telaRequerida="contas_receber">
+            <ContasReceber />
           </Protegida>
         }
       />
