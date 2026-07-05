@@ -4,6 +4,8 @@ import Cadastro from './pages/Cadastro';
 import Usuarios from './pages/Usuarios';
 import Pacientes from './pages/Pacientes';
 import PacienteFicha from './pages/PacienteFicha';
+import Servicos from './pages/Servicos';
+import Produtos from './pages/Produtos';
 import { Protegida } from './components/RotaProtegida';
 
 const EQUIPE = ['admin', 'recepcao', 'profissional'];
@@ -34,6 +36,22 @@ export default function App() {
         element={
           <Protegida papeisPermitidos={EQUIPE}>
             <PacienteFicha />
+          </Protegida>
+        }
+      />
+      <Route
+        path="/servicos"
+        element={
+          <Protegida papeisPermitidos={['admin']}>
+            <Servicos />
+          </Protegida>
+        }
+      />
+      <Route
+        path="/produtos"
+        element={
+          <Protegida papeisPermitidos={['admin', 'profissional']}>
+            <Produtos />
           </Protegida>
         }
       />
