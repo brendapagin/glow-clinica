@@ -249,9 +249,16 @@ select.select-papel { font-family: var(--fonte-corpo); padding: 6px; border: 1px
 .modal-topo h3 { font-family: var(--fonte-display); font-size: 22px; margin: 0; }
 .modal-fechar { background: none; border: none; font-size: 26px; cursor: pointer; color: var(--terracota-escuro); line-height: 1; padding: 0; }
 .modal-lista-exames {
-  display: flex; flex-direction: column; border-top: 1px solid var(--nude); border-bottom: 1px solid var(--nude);
-  padding: 8px 0; margin-bottom: 16px; max-height: 240px; overflow-y: auto;
+  display: flex; flex-direction: column; gap: 12px; border-top: 1px solid var(--nude); border-bottom: 1px solid var(--nude);
+  padding: 16px 0; margin-bottom: 16px; max-height: 300px; overflow-y: auto;
 }
+.modal-linha-exame { display: flex; align-items: center; gap: 14px; }
+.modal-linha-exame label { flex-shrink: 0; width: 110px; font-size: 14px; color: var(--marrom-tinta); }
+.modal-linha-exame input {
+  flex: 1; border: none; border-bottom: 1px solid var(--nude); background: transparent;
+  padding: 8px 2px; font-family: var(--fonte-corpo); font-size: 15px; color: var(--marrom-tinta);
+}
+.modal-linha-exame input:focus { outline: none; border-bottom-color: var(--dourado); }
 .modal-novo-item { display: flex; gap: 10px; }
 .modal-novo-item input {
   flex: 1; border: 1px solid var(--nude); border-radius: 4px; padding: 10px;
