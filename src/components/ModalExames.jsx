@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase';
 
 export function ModalExames({ aberto, selecionados, onFechar, onAplicar }) {
   const [itens, setItens] = useState([]);
-  const [marcados, setMarcados] = useState(new Set());
+  const [valores, setValores] = useState({});
   const [novoNome, setNovoNome] = useState('');
   const [salvandoNovo, setSalvandoNovo] = useState(false);
 
@@ -15,16 +15,14 @@ export function ModalExames({ aberto, selecionados, onFechar, onAplicar }) {
   useEffect(() => {
     if (aberto) {
       carregar();
-      setMarcados(new Set(selecionados.map((s) => s.exame_id)));
+      const iniciais = {};
+      selecionados.forEach((s) => { iniciais[s.exame_id] = s.valor || ''; });
+      setValores(iniciais);
     }
   }, [aberto]);
 
-  function alternar(id) {
-    setMarcados((atual) => {
-      const novo = new Set(atual);
-      novo.has(id) ? novo.delete(id) : novo.add(id);
-      return novo;
-    });
+  function atualizarValor(id, valor) {
+    setValores((atual) => ({ ...atual, [id]: valor }));
   }
 
   async function adicionarNovoItem(e) {
@@ -35,17 +33,13 @@ export function ModalExames({ aberto, selecionados, onFechar, onAplicar }) {
     setSalvandoNovo(false);
     if (error) { alert('Erro ao adicionar: ' + error.message); return; }
     setItens((lista) => [...lista, data].sort((a, b) => a.nome.localeCompare(b.nome)));
-    setMarcados((atual) => new Set(atual).add(data.id));
     setNovoNome('');
   }
 
   function aplicar() {
     const novaSelecao = itens
-      .filter((i) => marcados.has(i.id))
-      .map((i) => {
-        const existente = selecionados.find((s) => s.exame_id === i.id);
-        return { exame_id: i.id, nome: i.nome, valor: existente?.valor || '' };
-      });
+      .filter((i) => (valores[i.id] || '').trim() !== '')
+      .map((i) => ({ exame_id: i.id, nome: i.nome, valor: valores[i.id] }));
     onAplicar(novaSelecao);
     onFechar();
   }
@@ -56,16 +50,18 @@ export function ModalExames({ aberto, selecionados, onFechar, onAplicar }) {
     <div className="modal-fundo" onClick={onFechar}>
       <div className="modal-caixa" onClick={(e) => e.stopPropagation()}>
         <div className="modal-topo">
-          <h3>Selecionar exames</h3>
+          <h3>Exames</h3>
           <button className="modal-fechar" onClick={onFechar}>×</button>
         </div>
 
+        <p className="dica-texto" style={{ marginTop: 0 }}>Preencha o valor dos exames solicitados. Deixe em branco os que não se aplicam.</p>
+
         <div className="modal-lista-exames">
           {itens.map((item) => (
-            <label key={item.id} className="checkbox-tela" style={{ fontSize: 15, padding: '7px 0' }}>
-              <input type="checkbox" checked={marcados.has(item.id)} onChange={() => alternar(item.id)} />
-              {item.nome}
-            </label>
+            <div className="modal-linha-exame" key={item.id}>
+              <label>{item.nome}</label>
+              <input value={valores[item.id] || ''} onChange={(e) => atualizarValor(item.id, e.target.value)} placeholder="Resultado" />
+            </div>
           ))}
           {itens.length === 0 && <p className="dica-texto">Nenhum exame cadastrado ainda.</p>}
         </div>
