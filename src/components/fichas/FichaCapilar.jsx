@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { GaleriaFotos } from '../GaleriaFotos';
+import { ModalExames } from '../ModalExames';
 import { gerarTextoClinico } from '../../lib/geracaoTexto';
 
 const VAZIO = {
-  tipo_queda: '', classificacao: '', ferro: '', ferritina: '',
-  vitamina_d: '', tsh: '', protocolo: '', data_sessao: '', observacoes: '',
-  laudo: '', receituario: '',
+  tipo_queda: '', classificacao: '', protocolo: '', data_sessao: '', observacoes: '',
+  laudo: '', receituario: '', exames: [],
 };
 
 export function FichaCapilar({ pacienteId, pacienteNome }) {
@@ -15,13 +15,14 @@ export function FichaCapilar({ pacienteId, pacienteNome }) {
   const [mostrarForm, setMostrarForm] = useState(false);
   const [editandoId, setEditandoId] = useState(null);
   const [salvando, setSalvando] = useState(false);
+  const [modalExamesAberto, setModalExamesAberto] = useState(false);
   const [gerandoLaudo, setGerandoLaudo] = useState(false);
   const [gerandoReceituario, setGerandoReceituario] = useState(false);
 
   async function carregar() {
     const { data } = await supabase
       .from('fichas_capilar')
-      .select('*')
+      .select('*, ficha_capilar_exames(*, exames_itens(nome))')
       .eq('paciente_id', pacienteId)
       .order('criado_em', { ascending: false });
     setRegistros(data || []);
@@ -39,15 +40,14 @@ export function FichaCapilar({ pacienteId, pacienteNome }) {
     setForm({
       tipo_queda: r.tipo_queda || '',
       classificacao: r.classificacao || '',
-      ferro: r.ferro ?? '',
-      ferritina: r.ferritina ?? '',
-      vitamina_d: r.vitamina_d ?? '',
-      tsh: r.tsh ?? '',
       protocolo: r.protocolo || '',
       data_sessao: r.data_sessao || '',
       observacoes: r.observacoes || '',
       laudo: r.laudo || '',
       receituario: r.receituario || '',
+      exames: (r.ficha_capilar_exames || []).map((e) => ({
+        exame_id: e.exame_id, nome: e.exames_itens?.nome || '', valor: e.valor || '',
+      })),
     });
     setEditandoId(r.id);
     setMostrarForm(true);
@@ -59,9 +59,18 @@ export function FichaCapilar({ pacienteId, pacienteNome }) {
     carregar();
   }
 
+  function atualizarValorExame(exameId, valor) {
+    setForm((f) => ({
+      ...f,
+      exames: f.exames.map((e) => (e.exame_id === exameId ? { ...e, valor } : e)),
+    }));
+  }
+
   async function gerarLaudo() {
     setGerandoLaudo(true);
     try {
+      const dadosExames = {};
+      form.exames.forEach((e) => { dadosExames[e.nome] = e.valor; });
       const texto = await gerarTextoClinico({
         tipo: 'laudo',
         servico: 'capilar',
@@ -69,12 +78,9 @@ export function FichaCapilar({ pacienteId, pacienteNome }) {
         dados: {
           'Tipo de queda': form.tipo_queda,
           'Classificação': form.classificacao,
-          'Ferro': form.ferro,
-          'Ferritina': form.ferritina,
-          'Vitamina D': form.vitamina_d,
-          'TSH': form.tsh,
           'Protocolo': form.protocolo,
           'Observações': form.observacoes,
+          ...dadosExames,
         },
       });
       setForm((f) => ({ ...f, laudo: texto }));
@@ -107,21 +113,36 @@ export function FichaCapilar({ pacienteId, pacienteNome }) {
   async function salvar(e) {
     e.preventDefault();
     setSalvando(true);
+
     const dados = {
-      ...form,
-      ferro: form.ferro || null,
-      ferritina: form.ferritina || null,
-      vitamina_d: form.vitamina_d || null,
-      tsh: form.tsh || null,
+      tipo_queda: form.tipo_queda,
+      classificacao: form.classificacao,
+      protocolo: form.protocolo,
       data_sessao: form.data_sessao || null,
+      observacoes: form.observacoes,
+      laudo: form.laudo,
+      receituario: form.receituario,
     };
 
-    const { error } = editandoId
-      ? await supabase.from('fichas_capilar').update(dados).eq('id', editandoId)
-      : await supabase.from('fichas_capilar').insert({ paciente_id: pacienteId, ...dados });
+    let fichaId = editandoId;
+
+    if (editandoId) {
+      const { error } = await supabase.from('fichas_capilar').update(dados).eq('id', editandoId);
+      if (error) { alert('Erro ao salvar: ' + error.message); setSalvando(false); return; }
+      await supabase.from('ficha_capilar_exames').delete().eq('ficha_capilar_id', editandoId);
+    } else {
+      const { data, error } = await supabase.from('fichas_capilar').insert({ paciente_id: pacienteId, ...dados }).select().single();
+      if (error) { alert('Erro ao salvar: ' + error.message); setSalvando(false); return; }
+      fichaId = data.id;
+    }
+
+    if (form.exames.length > 0) {
+      const linhas = form.exames.map((ex) => ({ ficha_capilar_id: fichaId, exame_id: ex.exame_id, valor: ex.valor }));
+      const { error } = await supabase.from('ficha_capilar_exames').insert(linhas);
+      if (error) alert('Erro ao salvar exames: ' + error.message);
+    }
 
     setSalvando(false);
-    if (error) { alert('Erro ao salvar: ' + error.message); return; }
     setForm(VAZIO);
     setMostrarForm(false);
     setEditandoId(null);
@@ -150,22 +171,6 @@ export function FichaCapilar({ pacienteId, pacienteNome }) {
                 <input value={form.classificacao} onChange={(e) => setForm({ ...form, classificacao: e.target.value })} placeholder="Ludwig, Norwood..." />
               </div>
               <div className="campo">
-                <label>Ferro</label>
-                <input type="number" step="0.01" value={form.ferro} onChange={(e) => setForm({ ...form, ferro: e.target.value })} />
-              </div>
-              <div className="campo">
-                <label>Ferritina</label>
-                <input type="number" step="0.01" value={form.ferritina} onChange={(e) => setForm({ ...form, ferritina: e.target.value })} />
-              </div>
-              <div className="campo">
-                <label>Vitamina D</label>
-                <input type="number" step="0.01" value={form.vitamina_d} onChange={(e) => setForm({ ...form, vitamina_d: e.target.value })} />
-              </div>
-              <div className="campo">
-                <label>TSH</label>
-                <input type="number" step="0.01" value={form.tsh} onChange={(e) => setForm({ ...form, tsh: e.target.value })} />
-              </div>
-              <div className="campo">
                 <label>Protocolo</label>
                 <input value={form.protocolo} onChange={(e) => setForm({ ...form, protocolo: e.target.value })} placeholder="Laser, fotobiomodulação, PRP..." />
               </div>
@@ -174,6 +179,22 @@ export function FichaCapilar({ pacienteId, pacienteNome }) {
                 <input type="date" value={form.data_sessao} onChange={(e) => setForm({ ...form, data_sessao: e.target.value })} />
               </div>
             </div>
+
+            <button type="button" className="botao-exames" onClick={() => setModalExamesAberto(true)}>
+              🧪 Exames {form.exames.length > 0 ? `(${form.exames.length} selecionado${form.exames.length > 1 ? 's' : ''})` : '— nenhum selecionado'}
+            </button>
+
+            {form.exames.length > 0 && (
+              <div className="exames-selecionados-grid">
+                {form.exames.map((ex) => (
+                  <div className="campo" key={ex.exame_id}>
+                    <label>{ex.nome}</label>
+                    <input value={ex.valor} onChange={(e) => atualizarValorExame(ex.exame_id, e.target.value)} placeholder="Resultado" />
+                  </div>
+                ))}
+              </div>
+            )}
+
             <div className="campo">
               <label>Observações</label>
               <input value={form.observacoes} onChange={(e) => setForm({ ...form, observacoes: e.target.value })} />
@@ -224,12 +245,9 @@ export function FichaCapilar({ pacienteId, pacienteNome }) {
               </div>
               <p>{r.classificacao && `Classificação: ${r.classificacao}`}</p>
               <p>{r.protocolo && `Protocolo: ${r.protocolo}`}</p>
-              {(r.ferro || r.ferritina || r.vitamina_d || r.tsh) && (
+              {(r.ficha_capilar_exames || []).length > 0 && (
                 <p className="registro-exames">
-                  {r.ferro && `Ferro: ${r.ferro} `}
-                  {r.ferritina && `· Ferritina: ${r.ferritina} `}
-                  {r.vitamina_d && `· Vit. D: ${r.vitamina_d} `}
-                  {r.tsh && `· TSH: ${r.tsh}`}
+                  {r.ficha_capilar_exames.map((e) => `${e.exames_itens?.nome}: ${e.valor || '—'}`).join(' · ')}
                 </p>
               )}
               {r.observacoes && <p>{r.observacoes}</p>}
@@ -244,6 +262,13 @@ export function FichaCapilar({ pacienteId, pacienteNome }) {
         <h3>Fotos</h3>
         <GaleriaFotos pacienteId={pacienteId} servicoSlug="capilar" />
       </div>
+
+      <ModalExames
+        aberto={modalExamesAberto}
+        selecionados={form.exames}
+        onFechar={() => setModalExamesAberto(false)}
+        onAplicar={(novaSelecao) => setForm((f) => ({ ...f, exames: novaSelecao }))}
+      />
     </div>
   );
 }
