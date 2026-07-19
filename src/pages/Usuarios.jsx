@@ -7,6 +7,7 @@ const TELAS = [
   { valor: 'agendamentos', label: 'Agendamentos' },
   { valor: 'pacientes', label: 'Pacientes (dados)' },
   { valor: 'atendimento', label: 'Atendimento clínico' },
+  { valor: 'formulas', label: 'Fórmulas' },
   { valor: 'custo', label: 'Custo' },
   { valor: 'contas_pagar', label: 'Contas a Pagar' },
   { valor: 'contas_receber', label: 'Contas a Receber' },

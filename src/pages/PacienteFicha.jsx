@@ -5,11 +5,13 @@ import { Layout } from '../components/Layout';
 import { FichaCapilar } from '../components/fichas/FichaCapilar';
 import { FichaHarmonizacao } from '../components/fichas/FichaHarmonizacao';
 import { FichaGenerica } from '../components/fichas/FichaGenerica';
+import { FichaPrescricao } from '../components/fichas/FichaPrescricao';
 import { PacotesPaciente } from '../components/PacotesPaciente';
 
 function renderizarFicha(slug, nome, pacienteId, pacienteNome) {
   if (slug === 'capilar') return <FichaCapilar pacienteId={pacienteId} pacienteNome={pacienteNome} />;
   if (slug === 'harmonizacao') return <FichaHarmonizacao pacienteId={pacienteId} pacienteNome={pacienteNome} />;
+  if (slug === 'prescricao') return <FichaPrescricao pacienteId={pacienteId} pacienteNome={pacienteNome} />;
   return <FichaGenerica pacienteId={pacienteId} servicoSlug={slug} servicoNome={nome} pacienteNome={pacienteNome} />;
 }
 
