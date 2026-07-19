@@ -585,6 +585,13 @@ select.select-papel { font-family: var(--fonte-corpo); padding: 6px; border: 1px
 .caixa-cartao-clicavel:hover { border-color: var(--dourado); }
 .caixa-cartao-clicavel:active { transform: scale(0.98); }
 
+.painel-caixa {
+  background: var(--creme-claro); border: 1px solid var(--nude); border-radius: 10px;
+  padding: 20px 22px; margin-bottom: 20px;
+}
+.painel-caixa h3 { font-family: var(--fonte-display); font-size: 19px; margin: 0 0 14px; color: var(--marrom-tinta); }
+.painel-caixa .ficha-secao-topo { margin-bottom: 14px; }
+
 .galeria-fotos { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
 .galeria-coluna { }
 .galeria-cabecalho { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
