@@ -197,6 +197,16 @@ function AbaProdutos({ produtos, recarregar }) {
     recarregar();
   }
 
+  async function excluir(p) {
+    if (!confirm(`Excluir o produto "${p.nome}"? Essa ação não pode ser desfeita.`)) return;
+    const { error } = await supabase.from('produtos').delete().eq('id', p.id);
+    if (error) {
+      alert('Não foi possível excluir — esse produto já foi usado em algum atendimento. Você pode desativá-lo em vez de excluir, pra manter o histórico intacto.');
+      return;
+    }
+    recarregar();
+  }
+
   return (
     <>
       <div className="lista-topo">
@@ -290,6 +300,7 @@ function AbaProdutos({ produtos, recarregar }) {
               <td className="celula-acoes">
                 <button className="botao-secundario" onClick={() => iniciarEdicao(p)}>Editar</button>
                 <button className="botao-secundario" onClick={() => alternarAtivo(p)}>{p.ativo ? 'Desativar' : 'Ativar'}</button>
+                <button className="botao-secundario" onClick={() => excluir(p)}>Excluir</button>
               </td>
             </tr>
           ))}
