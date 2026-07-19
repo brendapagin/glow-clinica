@@ -11,7 +11,7 @@ export function AuthProvider({ children }) {
   async function carregarPerfil(userId) {
     const { data } = await supabase
       .from('usuarios')
-      .select('id, nome, email, papel, ativo')
+      .select('id, nome, email, papel, ativo, permissoes')
       .eq('id', userId)
       .single();
     setPerfil(data || null);
