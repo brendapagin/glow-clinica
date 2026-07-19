@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { Layout } from '../components/Layout';
 
@@ -137,13 +137,6 @@ function AbaProdutos({ produtos, recarregar }) {
   const [mostrarForm, setMostrarForm] = useState(false);
   const [editandoId, setEditandoId] = useState(null);
   const [salvando, setSalvando] = useState(false);
-  const formRef = useRef(null);
-
-  useEffect(() => {
-    if (mostrarForm && formRef.current) {
-      formRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-  }, [mostrarForm]);
 
   function iniciarNovo() {
     setForm(PRODUTO_VAZIO);
@@ -218,81 +211,90 @@ function AbaProdutos({ produtos, recarregar }) {
     <>
       <div className="lista-topo">
         <p className="dica-texto" style={{ margin: 0 }}>Cadastro interno usado nas aplicações — não é catálogo de venda.</p>
-        {!mostrarForm && <button className="botao" style={{ width: 'auto', padding: '12px 24px' }} onClick={iniciarNovo}>+ Novo produto</button>}
+        <button className="botao" style={{ width: 'auto', padding: '12px 24px' }} onClick={iniciarNovo}>+ Novo produto</button>
       </div>
 
       {mostrarForm && (
-        <form ref={formRef} className="ficha-form" onSubmit={salvar} style={{ marginBottom: 28 }}>
-          <div className="row2 ficha-grid">
-            <div className="campo">
-              <label>Nome do produto</label>
-              <input required value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} placeholder="Ex: Toxina botulínica" />
+        <div className="modal-fundo" onClick={() => { setMostrarForm(false); setEditandoId(null); }}>
+          <div className="modal-caixa" style={{ maxWidth: 560 }} onClick={(e) => e.stopPropagation()}>
+            <div className="modal-topo">
+              <h3>{editandoId ? 'Editar produto' : 'Novo produto'}</h3>
+              <button className="modal-fechar" onClick={() => { setMostrarForm(false); setEditandoId(null); }}>×</button>
             </div>
-            <div className="campo">
-              <label>{form.tipo === 'kit' ? 'Custo total do kit' : 'Preço pago (R$)'}</label>
-              {form.tipo === 'kit' ? (
-                <input disabled value={formatarMoeda(totalKit)} style={{ opacity: 0.7 }} />
-              ) : (
-                <input type="number" step="0.01" value={form.preco_total} onChange={(e) => setForm({ ...form, preco_total: e.target.value })} placeholder="Ex: 450" />
-              )}
-            </div>
-          </div>
 
-          <button type="button" className="link-secundario" style={{ textAlign: 'left', width: 'auto', margin: '0 0 14px' }} onClick={() => setDetalhesAbertos((v) => !v)}>
-            {detalhesAbertos ? '− menos detalhes' : '+ mais detalhes'}
-          </button>
-
-          {detalhesAbertos && (
-            <div style={{ marginBottom: 16 }}>
-              <div className="campo">
-                <label>Tipo</label>
-                <select value={form.tipo} onChange={(e) => setForm({ ...form, tipo: e.target.value })}>
-                  <option value="simples">Produto simples</option>
-                  <option value="kit">Kit (composto por vários itens)</option>
-                </select>
+            <form onSubmit={salvar}>
+              <div className="row2 ficha-grid">
+                <div className="campo">
+                  <label>Nome do produto</label>
+                  <input required value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} placeholder="Ex: Toxina botulínica" />
+                </div>
+                <div className="campo">
+                  <label>{form.tipo === 'kit' ? 'Custo total do kit' : 'Preço pago (R$)'}</label>
+                  {form.tipo === 'kit' ? (
+                    <input disabled value={formatarMoeda(totalKit)} style={{ opacity: 0.7 }} />
+                  ) : (
+                    <input type="number" step="0.01" value={form.preco_total} onChange={(e) => setForm({ ...form, preco_total: e.target.value })} placeholder="Ex: 450" />
+                  )}
+                </div>
               </div>
 
-              {form.tipo === 'simples' ? (
-                <div className="ficha-grid">
+              <button type="button" className="link-secundario" style={{ textAlign: 'left', width: 'auto', margin: '0 0 14px' }} onClick={() => setDetalhesAbertos((v) => !v)}>
+                {detalhesAbertos ? '− menos detalhes' : '+ mais detalhes'}
+              </button>
+
+              {detalhesAbertos && (
+                <div style={{ marginBottom: 16 }}>
                   <div className="campo">
-                    <label>Unidade</label>
-                    <select value={form.unidade} onChange={(e) => setForm({ ...form, unidade: e.target.value })}>
-                      <option value="unidade">unidade</option>
-                      <option value="ml">ml</option>
-                      <option value="mg">mg</option>
-                      <option value="ui">UI</option>
+                    <label>Tipo</label>
+                    <select value={form.tipo} onChange={(e) => setForm({ ...form, tipo: e.target.value })}>
+                      <option value="simples">Produto simples</option>
+                      <option value="kit">Kit (composto por vários itens)</option>
                     </select>
                   </div>
-                  <div className="campo">
-                    <label>Quantidade na embalagem</label>
-                    <input type="number" step="0.01" value={form.quantidade_total} onChange={(e) => setForm({ ...form, quantidade_total: e.target.value })} />
-                  </div>
-                  <div className="campo">
-                    <label>Especificação</label>
-                    <input value={form.especificacao} onChange={(e) => setForm({ ...form, especificacao: e.target.value })} placeholder="Marca, concentração..." />
-                  </div>
-                </div>
-              ) : (
-                <>
-                  {itensKit.map((item, i) => (
-                    <div className="aplicacao-linha" key={i}>
-                      <div className="campo"><label>Item</label><input value={item.nome_item} onChange={(e) => setItensKit((l) => l.map((x, xi) => xi === i ? { ...x, nome_item: e.target.value } : x))} placeholder="Luva, seringa..." /></div>
-                      <div className="campo"><label>Custo (R$)</label><input type="number" step="0.01" value={item.custo} onChange={(e) => setItensKit((l) => l.map((x, xi) => xi === i ? { ...x, custo: e.target.value } : x))} /></div>
-                      <div className="campo"><label>Quantidade</label><input type="number" value={item.quantidade} onChange={(e) => setItensKit((l) => l.map((x, xi) => xi === i ? { ...x, quantidade: e.target.value } : x))} /></div>
-                      {itensKit.length > 1 && <button type="button" className="remover-aplicacao" onClick={() => setItensKit((l) => l.filter((_, xi) => xi !== i))}>Remover item</button>}
-                    </div>
-                  ))}
-                  <button type="button" className="botao-secundario" onClick={() => setItensKit((l) => [...l, { ...ITEM_KIT_VAZIO }])} style={{ marginBottom: 12 }}>+ Adicionar item</button>
-                </>
-              )}
-            </div>
-          )}
 
-          <div className="ficha-form-acoes">
-            <button type="submit" className="botao" disabled={salvando} style={{ maxWidth: 220 }}>{salvando ? 'Salvando...' : editandoId ? 'Salvar alterações' : 'Cadastrar produto'}</button>
-            <button type="button" className="link-secundario" onClick={() => { setMostrarForm(false); setEditandoId(null); }}>Cancelar</button>
+                  {form.tipo === 'simples' ? (
+                    <div className="ficha-grid">
+                      <div className="campo">
+                        <label>Unidade</label>
+                        <select value={form.unidade} onChange={(e) => setForm({ ...form, unidade: e.target.value })}>
+                          <option value="unidade">unidade</option>
+                          <option value="ml">ml</option>
+                          <option value="mg">mg</option>
+                          <option value="ui">UI</option>
+                        </select>
+                      </div>
+                      <div className="campo">
+                        <label>Quantidade na embalagem</label>
+                        <input type="number" step="0.01" value={form.quantidade_total} onChange={(e) => setForm({ ...form, quantidade_total: e.target.value })} />
+                      </div>
+                      <div className="campo">
+                        <label>Especificação</label>
+                        <input value={form.especificacao} onChange={(e) => setForm({ ...form, especificacao: e.target.value })} placeholder="Marca, concentração..." />
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      {itensKit.map((item, i) => (
+                        <div className="aplicacao-linha" key={i}>
+                          <div className="campo"><label>Item</label><input value={item.nome_item} onChange={(e) => setItensKit((l) => l.map((x, xi) => xi === i ? { ...x, nome_item: e.target.value } : x))} placeholder="Luva, seringa..." /></div>
+                          <div className="campo"><label>Custo (R$)</label><input type="number" step="0.01" value={item.custo} onChange={(e) => setItensKit((l) => l.map((x, xi) => xi === i ? { ...x, custo: e.target.value } : x))} /></div>
+                          <div className="campo"><label>Quantidade</label><input type="number" value={item.quantidade} onChange={(e) => setItensKit((l) => l.map((x, xi) => xi === i ? { ...x, quantidade: e.target.value } : x))} /></div>
+                          {itensKit.length > 1 && <button type="button" className="remover-aplicacao" onClick={() => setItensKit((l) => l.filter((_, xi) => xi !== i))}>Remover item</button>}
+                        </div>
+                      ))}
+                      <button type="button" className="botao-secundario" onClick={() => setItensKit((l) => [...l, { ...ITEM_KIT_VAZIO }])} style={{ marginBottom: 12 }}>+ Adicionar item</button>
+                    </>
+                  )}
+                </div>
+              )}
+
+              <div className="ficha-form-acoes">
+                <button type="submit" className="botao" disabled={salvando} style={{ maxWidth: 220 }}>{salvando ? 'Salvando...' : editandoId ? 'Salvar alterações' : 'Cadastrar produto'}</button>
+                <button type="button" className="link-secundario" onClick={() => { setMostrarForm(false); setEditandoId(null); }}>Cancelar</button>
+              </div>
+            </form>
           </div>
-        </form>
+        </div>
       )}
 
       <table className="tabela-refinada">
@@ -329,14 +331,8 @@ function AbaComposicoes({ composicoes, servicos, custoItens, recarregar }) {
   const [salvando, setSalvando] = useState(false);
   const [sugestaoAberta, setSugestaoAberta] = useState(null);
   const [itensDisponiveis, setItensDisponiveis] = useState(custoItens);
-  const formRef = useRef(null);
 
   useEffect(() => { setItensDisponiveis(custoItens); }, [custoItens]);
-  useEffect(() => {
-    if (mostrarForm && formRef.current) {
-      formRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-  }, [mostrarForm]);
 
   function iniciarNovo() {
     setForm(COMPOSICAO_VAZIA);
@@ -429,83 +425,92 @@ function AbaComposicoes({ composicoes, servicos, custoItens, recarregar }) {
     <>
       <div className="lista-topo">
         <p className="dica-texto" style={{ margin: 0 }}>Monte o custo de cada serviço combinando itens em R$ ou %.</p>
-        {!mostrarForm && <button className="botao" style={{ width: 'auto', padding: '12px 24px' }} onClick={iniciarNovo}>+ Nova composição</button>}
+        <button className="botao" style={{ width: 'auto', padding: '12px 24px' }} onClick={iniciarNovo}>+ Nova composição</button>
       </div>
 
       {mostrarForm && (
-        <form ref={formRef} className="ficha-form" onSubmit={salvarComposicao} style={{ marginBottom: 28 }}>
-          <div className="ficha-grid">
-            <div className="campo">
-              <label>Nome da composição</label>
-              <input required value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} placeholder="Ex: Capilar" />
+        <div className="modal-fundo" onClick={() => { setMostrarForm(false); setEditandoId(null); }}>
+          <div className="modal-caixa" style={{ maxWidth: 640 }} onClick={(e) => e.stopPropagation()}>
+            <div className="modal-topo">
+              <h3>{editandoId ? 'Editar composição' : 'Nova composição'}</h3>
+              <button className="modal-fechar" onClick={() => { setMostrarForm(false); setEditandoId(null); }}>×</button>
             </div>
-            <div className="campo">
-              <label>Serviço vinculado (opcional)</label>
-              <select value={form.servico_id} onChange={(e) => setForm({ ...form, servico_id: e.target.value })}>
-                <option value="">Nenhum específico</option>
-                {servicos.map((s) => <option key={s.id} value={s.id}>{s.nome}</option>)}
-              </select>
-            </div>
-            <div className="campo">
-              <label>Valor de referência (R$)</label>
-              <input type="number" step="0.01" required value={form.valor_base} onChange={(e) => setForm({ ...form, valor_base: e.target.value })} placeholder="Ex: 200" />
-            </div>
-          </div>
 
-          <h4 className="aplicacoes-titulo">Itens desta composição</h4>
-
-          {linhas.map((linha, index) => {
-            const sugestoes = itensDisponiveis.filter((i) => i.nome.toLowerCase().includes((linha.itemNome || '').toLowerCase()));
-            const existeExato = itensDisponiveis.some((i) => i.nome.toLowerCase() === (linha.itemNome || '').toLowerCase());
-            return (
-              <div className="aplicacao-linha" key={index}>
-                <div className="campo autocomplete-wrap">
-                  <label>Item de custo</label>
-                  <input
-                    value={linha.itemNome}
-                    onChange={(e) => buscarItem(index, e.target.value)}
-                    onFocus={() => linha.itemNome && setSugestaoAberta(index)}
-                    placeholder="Ex: Água"
-                    autoComplete="off"
-                  />
-                  {sugestaoAberta === index && linha.itemNome && (
-                    <div className="sugestoes-caixa">
-                      {sugestoes.map((s) => (
-                        <div key={s.id} className="sugestao-item" onMouseDown={() => escolherItemExistente(index, s)}>{s.nome}</div>
-                      ))}
-                      {!existeExato && (
-                        <div className="sugestao-item sugestao-criar" onMouseDown={() => criarECelecionarItem(index, linha.itemNome)}>
-                          + Criar "{linha.itemNome}"
-                        </div>
-                      )}
-                    </div>
-                  )}
+            <form onSubmit={salvarComposicao}>
+              <div className="ficha-grid">
+                <div className="campo">
+                  <label>Nome da composição</label>
+                  <input required value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} placeholder="Ex: Capilar" />
                 </div>
                 <div className="campo">
-                  <label>Tipo</label>
-                  <select value={linha.tipo} onChange={(e) => atualizarLinha(index, 'tipo', e.target.value)}>
-                    <option value="fixo">Valor fixo (R$)</option>
-                    <option value="percentual">Percentual (%)</option>
+                  <label>Serviço vinculado (opcional)</label>
+                  <select value={form.servico_id} onChange={(e) => setForm({ ...form, servico_id: e.target.value })}>
+                    <option value="">Nenhum específico</option>
+                    {servicos.map((s) => <option key={s.id} value={s.id}>{s.nome}</option>)}
                   </select>
                 </div>
                 <div className="campo">
-                  <label>{linha.tipo === 'percentual' ? 'Percentual (%)' : 'Valor (R$)'}</label>
-                  <input type="number" step="0.01" value={linha.valor} onChange={(e) => atualizarLinha(index, 'valor', e.target.value)} />
+                  <label>Valor de referência (R$)</label>
+                  <input type="number" step="0.01" required value={form.valor_base} onChange={(e) => setForm({ ...form, valor_base: e.target.value })} placeholder="Ex: 200" />
                 </div>
-                {linhas.length > 1 && <button type="button" className="remover-aplicacao" onClick={() => setLinhas((l) => l.filter((_, i) => i !== index))}>Remover item</button>}
               </div>
-            );
-          })}
 
-          <button type="button" className="botao-secundario" onClick={() => setLinhas((l) => [...l, { ...LINHA_VAZIA }])} style={{ marginBottom: 16 }}>+ Adicionar item</button>
+              <h4 className="aplicacoes-titulo">Itens desta composição</h4>
 
-          <p className="dica-texto">Total calculado: <strong>{formatarMoeda(totalFormComposicao)}</strong></p>
+              {linhas.map((linha, index) => {
+                const sugestoes = itensDisponiveis.filter((i) => i.nome.toLowerCase().includes((linha.itemNome || '').toLowerCase()));
+                const existeExato = itensDisponiveis.some((i) => i.nome.toLowerCase() === (linha.itemNome || '').toLowerCase());
+                return (
+                  <div className="aplicacao-linha" key={index}>
+                    <div className="campo autocomplete-wrap">
+                      <label>Item de custo</label>
+                      <input
+                        value={linha.itemNome}
+                        onChange={(e) => buscarItem(index, e.target.value)}
+                        onFocus={() => linha.itemNome && setSugestaoAberta(index)}
+                        placeholder="Ex: Água"
+                        autoComplete="off"
+                      />
+                      {sugestaoAberta === index && linha.itemNome && (
+                        <div className="sugestoes-caixa">
+                          {sugestoes.map((s) => (
+                            <div key={s.id} className="sugestao-item" onMouseDown={() => escolherItemExistente(index, s)}>{s.nome}</div>
+                          ))}
+                          {!existeExato && (
+                            <div className="sugestao-item sugestao-criar" onMouseDown={() => criarECelecionarItem(index, linha.itemNome)}>
+                              + Criar "{linha.itemNome}"
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    <div className="campo">
+                      <label>Tipo</label>
+                      <select value={linha.tipo} onChange={(e) => atualizarLinha(index, 'tipo', e.target.value)}>
+                        <option value="fixo">Valor fixo (R$)</option>
+                        <option value="percentual">Percentual (%)</option>
+                      </select>
+                    </div>
+                    <div className="campo">
+                      <label>{linha.tipo === 'percentual' ? 'Percentual (%)' : 'Valor (R$)'}</label>
+                      <input type="number" step="0.01" value={linha.valor} onChange={(e) => atualizarLinha(index, 'valor', e.target.value)} />
+                    </div>
+                    {linhas.length > 1 && <button type="button" className="remover-aplicacao" onClick={() => setLinhas((l) => l.filter((_, i) => i !== index))}>Remover item</button>}
+                  </div>
+                );
+              })}
 
-          <div className="ficha-form-acoes">
-            <button type="submit" className="botao" disabled={salvando} style={{ maxWidth: 220 }}>{salvando ? 'Salvando...' : editandoId ? 'Salvar alterações' : 'Salvar composição'}</button>
-            <button type="button" className="link-secundario" onClick={() => { setMostrarForm(false); setEditandoId(null); }}>Cancelar</button>
+              <button type="button" className="botao-secundario" onClick={() => setLinhas((l) => [...l, { ...LINHA_VAZIA }])} style={{ marginBottom: 16 }}>+ Adicionar item</button>
+
+              <p className="dica-texto">Total calculado: <strong>{formatarMoeda(totalFormComposicao)}</strong></p>
+
+              <div className="ficha-form-acoes">
+                <button type="submit" className="botao" disabled={salvando} style={{ maxWidth: 220 }}>{salvando ? 'Salvando...' : editandoId ? 'Salvar alterações' : 'Salvar composição'}</button>
+                <button type="button" className="link-secundario" onClick={() => { setMostrarForm(false); setEditandoId(null); }}>Cancelar</button>
+              </div>
+            </form>
           </div>
-        </form>
+        </div>
       )}
 
       <div className="lista-registros">
