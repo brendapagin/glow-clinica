@@ -7,7 +7,10 @@ const HORA_FIM = 19;
 const DIAS_SEMANA = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
 function isoData(d) {
-  return d.toISOString().slice(0, 10);
+  const ano = d.getFullYear();
+  const mes = String(d.getMonth() + 1).padStart(2, '0');
+  const dia = String(d.getDate()).padStart(2, '0');
+  return `${ano}-${mes}-${dia}`;
 }
 
 function somarDias(d, n) {
@@ -204,7 +207,7 @@ export default function Agendamentos() {
 
           <div className="agenda-dia">
             {slots.map((hora) => {
-              const ag = agendamentosDoDia(diaSelecionado).find((a) => {
+              const agsDoSlot = agendamentosDoDia(diaSelecionado).filter((a) => {
                 const dt = new Date(a.data_hora);
                 return `${String(dt.getHours()).padStart(2, '0')}:${String(dt.getMinutes()).padStart(2, '0')}` === hora;
               });
@@ -212,10 +215,14 @@ export default function Agendamentos() {
                 <div className="horario-linha" key={hora}>
                   <div className="hora-label">{hora}</div>
                   <div className="slot-conteudo">
-                    {ag ? (
-                      <div className={`bloco-agendamento status-${ag.status}`} onClick={() => abrirEdicaoAgendamento(ag)}>
-                        <span className="bloco-nome">{ag.pacientes?.nome}</span>
-                        <span className="bloco-servico">{ag.servicos?.nome || 'Sem serviço'} · {ag.duracao_minutos}min · {ag.status}</span>
+                    {agsDoSlot.length > 0 ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                        {agsDoSlot.map((ag) => (
+                          <div key={ag.id} className={`bloco-agendamento status-${ag.status}`} onClick={() => abrirEdicaoAgendamento(ag)}>
+                            <span className="bloco-nome">{ag.pacientes?.nome}</span>
+                            <span className="bloco-servico">{ag.servicos?.nome || 'Sem serviço'} · {ag.duracao_minutos}min · {ag.status}</span>
+                          </div>
+                        ))}
                       </div>
                     ) : (
                       <div className="slot-vazio" onClick={() => abrirNovoAgendamento(hora)} />
