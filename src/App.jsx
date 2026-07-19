@@ -4,9 +4,7 @@ import Cadastro from './pages/Cadastro';
 import Usuarios from './pages/Usuarios';
 import Pacientes from './pages/Pacientes';
 import PacienteFicha from './pages/PacienteFicha';
-import Servicos from './pages/Servicos';
-import Produtos from './pages/Produtos';
-import Custos from './pages/Custos';
+import Custo from './pages/Custo';
 import ContasPagar from './pages/ContasPagar';
 import ContasReceber from './pages/ContasReceber';
 import Caixa from './pages/Caixa';
@@ -42,26 +40,10 @@ export default function App() {
         }
       />
       <Route
-        path="/servicos"
+        path="/custo"
         element={
-          <Protegida telaRequerida="servicos">
-            <Servicos />
-          </Protegida>
-        }
-      />
-      <Route
-        path="/produtos"
-        element={
-          <Protegida telaRequerida="produtos">
-            <Produtos />
-          </Protegida>
-        }
-      />
-      <Route
-        path="/custos"
-        element={
-          <Protegida telaRequerida="custos">
-            <Custos />
+          <Protegida telaRequerida="custo">
+            <Custo />
           </Protegida>
         }
       />

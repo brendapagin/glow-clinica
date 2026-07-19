@@ -236,6 +236,18 @@ select.select-papel { font-family: var(--fonte-corpo); padding: 6px; border: 1px
 .selecao-resumo button { background: none; border: none; color: var(--terracota-escuro); text-decoration: underline; cursor: pointer; font-size: 13px; font-family: var(--fonte-corpo); }
 .checkbox-linha { width: auto !important; }
 
+.row2 { display: grid; grid-template-columns: 1fr 1fr; }
+
+.autocomplete-wrap { position: relative; }
+.sugestoes-caixa {
+  position: absolute; top: 100%; left: 0; right: 0; background: var(--creme-claro);
+  border: 1px solid var(--nude); border-radius: 6px; z-index: 5; max-height: 160px;
+  overflow-y: auto; margin-top: 2px;
+}
+.sugestao-item { padding: 9px 12px; font-size: 14px; cursor: pointer; }
+.sugestao-item:hover { background: var(--nude); }
+.sugestao-criar { color: var(--terracota-escuro); font-style: italic; }
+
 /* ---------- Modal ---------- */
 .modal-fundo {
   position: fixed; inset: 0; background: rgba(74, 63, 58, 0.45);
