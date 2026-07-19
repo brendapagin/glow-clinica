@@ -1,8 +1,9 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Users, ShieldCheck, LogOut, Calculator, Receipt, HandCoins, Wallet } from 'lucide-react';
+import { Users, ShieldCheck, LogOut, Calculator, Receipt, HandCoins, Wallet, LayoutDashboard } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 const ITENS_NAV = [
+  { to: '/painel', label: 'Painel', Icone: LayoutDashboard, tela: null },
   { to: '/pacientes', label: 'Pacientes', Icone: Users, tela: 'pacientes' },
   { to: '/custo', label: 'Custo', Icone: Calculator, tela: 'custo' },
   { to: '/contas-pagar', label: 'Contas a Pagar', Icone: Receipt, tela: 'contas_pagar' },
@@ -40,7 +41,7 @@ export function Layout({ titulo, children }) {
         </div>
 
         <nav className="sidebar-nav">
-          {ITENS_NAV.filter((item) => perfil?.papel === 'admin' || perfil?.permissoes?.includes(item.tela)).map(({ to, label, Icone }) => (
+          {ITENS_NAV.filter((item) => !item.tela || perfil?.papel === 'admin' || perfil?.permissoes?.includes(item.tela)).map(({ to, label, Icone }) => (
             <Link
               key={to}
               to={to}
