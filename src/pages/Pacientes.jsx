@@ -2,11 +2,13 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { Layout } from '../components/Layout';
+import { useAuth } from '../context/AuthContext';
 
 const VAZIO = { nome: '', cpf: '', telefone: '', email: '', data_nascimento: '', genero: '', endereco: '' };
 
 export default function Pacientes() {
   const navigate = useNavigate();
+  const { perfil } = useAuth();
   const [pacientes, setPacientes] = useState([]);
   const [busca, setBusca] = useState('');
   const [carregando, setCarregando] = useState(true);
@@ -157,7 +159,11 @@ export default function Pacientes() {
               <button className="modal-fechar" onClick={() => setPacienteEscolhido(null)}>×</button>
             </div>
             <div className="ficha-form-acoes" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 12 }}>
-              <button className="botao" onClick={() => navigate(`/pacientes/${pacienteEscolhido.id}`)}>Iniciar atendimento</button>
+              {(perfil?.papel === 'admin' || perfil?.permissoes?.includes('atendimento')) ? (
+                <button className="botao" onClick={() => navigate(`/pacientes/${pacienteEscolhido.id}`)}>Iniciar atendimento</button>
+              ) : (
+                <p className="dica-texto" style={{ margin: 0 }}>Você não tem permissão para iniciar atendimentos.</p>
+              )}
               <button className="botao-secundario" onClick={() => abrirEdicao(pacienteEscolhido)}>Editar dados do paciente</button>
             </div>
           </div>
