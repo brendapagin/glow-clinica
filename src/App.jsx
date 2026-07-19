@@ -7,6 +7,7 @@ import PacienteFicha from './pages/PacienteFicha';
 import Custo from './pages/Custo';
 import Painel from './pages/Painel';
 import Agendamentos from './pages/Agendamentos';
+import Formulas from './pages/Formulas';
 import ContasPagar from './pages/ContasPagar';
 import ContasReceber from './pages/ContasReceber';
 import Caixa from './pages/Caixa';
@@ -86,6 +87,14 @@ export default function App() {
         element={
           <Protegida telaRequerida="agendamentos">
             <Agendamentos />
+          </Protegida>
+        }
+      />
+      <Route
+        path="/formulas"
+        element={
+          <Protegida telaRequerida="formulas">
+            <Formulas />
           </Protegida>
         }
       />
