@@ -4,9 +4,8 @@ import { GaleriaFotos } from '../GaleriaFotos';
 import { ModalExames } from '../ModalExames';
 import { gerarTextoClinico } from '../../lib/geracaoTexto';
 
-const APLICACAO_VAZIA = {
-  procedimento: '', produto_id: '', quantidade: '', unidade: 'ml', lote: '', validade: '', especificacao: '',
-};
+const PRODUTO_VAZIO = { produto_id: '', quantidade: '', unidade: 'ml', lote: '', validade: '', especificacao: '' };
+const APLICACAO_VAZIA = { procedimento: '', produtos: [{ ...PRODUTO_VAZIO }] };
 const VAZIO = {
   tipo_queda: '', classificacao: '', protocolo: '', data_sessao: '', observacoes: '',
   laudo: '', receituario: '', exames: [],
@@ -19,25 +18,31 @@ function formatarMoeda(valor) {
   return Number(valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 2 });
 }
 
-function custoAplicacao(aplicacao) {
-  const produto = aplicacao.produtos;
-  if (!produto || !produto.custo_unitario || !aplicacao.quantidade) return null;
-  if (produto.unidade && aplicacao.unidade && produto.unidade !== aplicacao.unidade) return null;
-  return produto.custo_unitario * aplicacao.quantidade;
+function custoProduto(produtoLinha) {
+  const produto = produtoLinha.produtos;
+  if (!produto || !produto.custo_unitario || !produtoLinha.quantidade) return null;
+  if (produto.unidade && produtoLinha.unidade && produto.unidade !== produtoLinha.unidade) return null;
+  return produto.custo_unitario * produtoLinha.quantidade;
 }
 
-function custoAplicacaoForm(ap, listaProdutos) {
-  const produto = listaProdutos.find((p) => p.id === ap.produto_id);
-  if (!produto || !produto.custo_unitario || !ap.quantidade) return null;
-  if (produto.unidade && ap.unidade && produto.unidade !== ap.unidade) return null;
-  return produto.custo_unitario * ap.quantidade;
+function custoProdutoForm(prod, listaProdutos) {
+  const produto = listaProdutos.find((p) => p.id === prod.produto_id);
+  if (!produto || !produto.custo_unitario || !prod.quantidade) return null;
+  if (produto.unidade && prod.unidade && produto.unidade !== prod.unidade) return null;
+  return produto.custo_unitario * prod.quantidade;
+}
+
+function custoAplicacaoSalva(aplicacao) {
+  const produtos = aplicacao.capilar_aplicacao_produtos || [];
+  const custos = produtos.map(custoProduto).filter((c) => c !== null);
+  return custos.reduce((soma, c) => soma + c, 0);
 }
 
 function custoProdutosRegistro(registro) {
-  const aplicacoes = registro.fichas_capilar_aplicacoes || [];
-  const custos = aplicacoes.map(custoAplicacao).filter((c) => c !== null);
-  if (custos.length === 0) return null;
-  return custos.reduce((soma, c) => soma + c, 0);
+  const aplicacoes = registro.capilar_aplicacoes || [];
+  if (aplicacoes.length === 0) return null;
+  const total = aplicacoes.reduce((soma, ap) => soma + custoAplicacaoSalva(ap), 0);
+  return total;
 }
 
 function calcularTotalComposicao(linhas, valorBase) {
@@ -62,7 +67,7 @@ export function FichaCapilar({ pacienteId, pacienteNome }) {
   async function carregar() {
     const { data } = await supabase
       .from('fichas_capilar')
-      .select('*, ficha_capilar_exames(*, exames_itens(nome)), fichas_capilar_aplicacoes(*, produtos(nome, custo_unitario, unidade))')
+      .select('*, ficha_capilar_exames(*, exames_itens(nome)), capilar_aplicacoes(*, capilar_aplicacao_produtos(*, produtos(nome, custo_unitario, unidade)))')
       .eq('paciente_id', pacienteId)
       .order('criado_em', { ascending: false });
     setRegistros(data || []);
@@ -101,15 +106,19 @@ export function FichaCapilar({ pacienteId, pacienteNome }) {
       exames: (r.ficha_capilar_exames || []).map((e) => ({
         exame_id: e.exame_id, nome: e.exames_itens?.nome || '', valor: e.valor || '',
       })),
-      aplicacoes: (r.fichas_capilar_aplicacoes || []).length > 0
-        ? r.fichas_capilar_aplicacoes.map((a) => ({
-            procedimento: a.procedimento || '',
-            produto_id: a.produto_id || '',
-            quantidade: a.quantidade ?? '',
-            unidade: a.unidade || 'ml',
-            lote: a.lote || '',
-            validade: a.validade || '',
-            especificacao: a.especificacao || '',
+      aplicacoes: (r.capilar_aplicacoes || []).length > 0
+        ? r.capilar_aplicacoes.map((ap) => ({
+            procedimento: ap.procedimento || '',
+            produtos: (ap.capilar_aplicacao_produtos || []).length > 0
+              ? ap.capilar_aplicacao_produtos.map((p) => ({
+                  produto_id: p.produto_id || '',
+                  quantidade: p.quantidade ?? '',
+                  unidade: p.unidade || 'ml',
+                  lote: p.lote || '',
+                  validade: p.validade || '',
+                  especificacao: p.especificacao || '',
+                }))
+              : [{ ...PRODUTO_VAZIO }],
           }))
         : [{ ...APLICACAO_VAZIA }],
     });
@@ -131,27 +140,53 @@ export function FichaCapilar({ pacienteId, pacienteNome }) {
     }));
   }
 
-  function atualizarAplicacao(index, campo, valor) {
+  function atualizarProcedimento(indexAp, valor) {
     setForm((f) => {
       const aplicacoes = [...f.aplicacoes];
-      aplicacoes[index] = { ...aplicacoes[index], [campo]: valor };
+      aplicacoes[indexAp] = { ...aplicacoes[indexAp], procedimento: valor };
       return { ...f, aplicacoes };
     });
   }
 
-  function selecionarProduto(index, produtoId) {
+  function atualizarProdutoDaAplicacao(indexAp, indexProd, campo, valor) {
+    setForm((f) => {
+      const aplicacoes = [...f.aplicacoes];
+      const produtosDaAplicacao = [...aplicacoes[indexAp].produtos];
+      produtosDaAplicacao[indexProd] = { ...produtosDaAplicacao[indexProd], [campo]: valor };
+      aplicacoes[indexAp] = { ...aplicacoes[indexAp], produtos: produtosDaAplicacao };
+      return { ...f, aplicacoes };
+    });
+  }
+
+  function selecionarProdutoNaAplicacao(indexAp, indexProd, produtoId) {
     const produto = produtos.find((p) => p.id === produtoId);
-    atualizarAplicacao(index, 'produto_id', produtoId);
-    if (produto?.especificacao) atualizarAplicacao(index, 'especificacao', produto.especificacao);
-    if (produto?.unidade) atualizarAplicacao(index, 'unidade', produto.unidade);
+    atualizarProdutoDaAplicacao(indexAp, indexProd, 'produto_id', produtoId);
+    if (produto?.especificacao) atualizarProdutoDaAplicacao(indexAp, indexProd, 'especificacao', produto.especificacao);
+    if (produto?.unidade) atualizarProdutoDaAplicacao(indexAp, indexProd, 'unidade', produto.unidade);
   }
 
-  function adicionarLinha() {
-    setForm((f) => ({ ...f, aplicacoes: [...f.aplicacoes, { ...APLICACAO_VAZIA }] }));
+  function adicionarAplicacao() {
+    setForm((f) => ({ ...f, aplicacoes: [...f.aplicacoes, { ...APLICACAO_VAZIA, produtos: [{ ...PRODUTO_VAZIO }] }] }));
   }
 
-  function removerLinha(index) {
-    setForm((f) => ({ ...f, aplicacoes: f.aplicacoes.filter((_, i) => i !== index) }));
+  function removerAplicacao(indexAp) {
+    setForm((f) => ({ ...f, aplicacoes: f.aplicacoes.filter((_, i) => i !== indexAp) }));
+  }
+
+  function adicionarProdutoNaAplicacao(indexAp) {
+    setForm((f) => {
+      const aplicacoes = [...f.aplicacoes];
+      aplicacoes[indexAp] = { ...aplicacoes[indexAp], produtos: [...aplicacoes[indexAp].produtos, { ...PRODUTO_VAZIO }] };
+      return { ...f, aplicacoes };
+    });
+  }
+
+  function removerProdutoDaAplicacao(indexAp, indexProd) {
+    setForm((f) => {
+      const aplicacoes = [...f.aplicacoes];
+      aplicacoes[indexAp] = { ...aplicacoes[indexAp], produtos: aplicacoes[indexAp].produtos.filter((_, i) => i !== indexProd) };
+      return { ...f, aplicacoes };
+    });
   }
 
   function selecionarComposicao(composicaoId) {
@@ -251,7 +286,7 @@ export function FichaCapilar({ pacienteId, pacienteNome }) {
       const { error } = await supabase.from('fichas_capilar').update(dados).eq('id', editandoId);
       if (error) { alert('Erro ao salvar: ' + error.message); setSalvando(false); return; }
       await supabase.from('ficha_capilar_exames').delete().eq('ficha_capilar_id', editandoId);
-      await supabase.from('fichas_capilar_aplicacoes').delete().eq('ficha_capilar_id', editandoId);
+      await supabase.from('capilar_aplicacoes').delete().eq('ficha_capilar_id', editandoId);
     } else {
       const { data, error } = await supabase.from('fichas_capilar').insert({ paciente_id: pacienteId, ...dados }).select().single();
       if (error) { alert('Erro ao salvar: ' + error.message); setSalvando(false); return; }
@@ -264,22 +299,32 @@ export function FichaCapilar({ pacienteId, pacienteNome }) {
       if (error) alert('Erro ao salvar exames: ' + error.message);
     }
 
-    const aplicacoesParaSalvar = form.aplicacoes
-      .filter((a) => a.procedimento || a.produto_id)
-      .map((a) => ({
-        ficha_capilar_id: fichaId,
-        procedimento: a.procedimento,
-        produto_id: a.produto_id || null,
-        quantidade: a.quantidade || null,
-        unidade: a.unidade || 'ml',
-        lote: a.lote,
-        validade: a.validade || null,
-        especificacao: a.especificacao,
-      }));
+    const aplicacoesValidas = form.aplicacoes.filter((ap) => ap.procedimento || ap.produtos.some((p) => p.produto_id));
+    for (const ap of aplicacoesValidas) {
+      const { data: apRow, error: erroAp } = await supabase
+        .from('capilar_aplicacoes')
+        .insert({ ficha_capilar_id: fichaId, procedimento: ap.procedimento })
+        .select()
+        .single();
 
-    if (aplicacoesParaSalvar.length > 0) {
-      const { error } = await supabase.from('fichas_capilar_aplicacoes').insert(aplicacoesParaSalvar);
-      if (error) alert('Erro ao salvar aplicações: ' + error.message);
+      if (erroAp) { alert('Erro ao salvar aplicação: ' + erroAp.message); continue; }
+
+      const produtosParaSalvar = ap.produtos
+        .filter((p) => p.produto_id)
+        .map((p) => ({
+          aplicacao_id: apRow.id,
+          produto_id: p.produto_id,
+          quantidade: p.quantidade || null,
+          unidade: p.unidade || 'ml',
+          lote: p.lote,
+          validade: p.validade || null,
+          especificacao: p.especificacao,
+        }));
+
+      if (produtosParaSalvar.length > 0) {
+        const { error: erroProd } = await supabase.from('capilar_aplicacao_produtos').insert(produtosParaSalvar);
+        if (erroProd) alert('Erro ao salvar produtos: ' + erroProd.message);
+      }
     }
 
     await sincronizarContaReceber(fichaId, Number(form.valor_cobrado) || 0, form.data_sessao);
@@ -339,54 +384,69 @@ export function FichaCapilar({ pacienteId, pacienteNome }) {
 
             <h4 className="aplicacoes-titulo">Aplicações deste atendimento</h4>
 
-            {form.aplicacoes.map((ap, index) => (
-              <div className="aplicacao-linha" key={index}>
+            {form.aplicacoes.map((ap, indexAp) => (
+              <div className="aplicacao-bloco" key={indexAp}>
                 <div className="campo">
                   <label>Procedimento</label>
-                  <input value={ap.procedimento} onChange={(e) => atualizarAplicacao(index, 'procedimento', e.target.value)} placeholder="Laser, PRP, mesoterapia..." />
+                  <input value={ap.procedimento} onChange={(e) => atualizarProcedimento(indexAp, e.target.value)} placeholder="Laser, PRP, mesoterapia..." />
                 </div>
-                <div className="campo">
-                  <label>Produto</label>
-                  <select value={ap.produto_id} onChange={(e) => selecionarProduto(index, e.target.value)}>
-                    <option value="">Selecione...</option>
-                    {produtos.map((p) => <option key={p.id} value={p.id}>{p.nome}</option>)}
-                  </select>
-                </div>
-                <div className="campo">
-                  <label>Quantidade</label>
-                  <div className="campo-composto">
-                    <input type="number" step="0.1" value={ap.quantidade} onChange={(e) => atualizarAplicacao(index, 'quantidade', e.target.value)} />
-                    <select value={ap.unidade} onChange={(e) => atualizarAplicacao(index, 'unidade', e.target.value)}>
-                      <option value="ml">ml</option>
-                      <option value="mg">mg</option>
-                      <option value="ui">UI</option>
-                      <option value="unidade">un.</option>
-                    </select>
+
+                <p className="produtos-subtitulo">Produtos usados nesta aplicação</p>
+
+                {ap.produtos.map((prod, indexProd) => (
+                  <div className="aplicacao-linha" key={indexProd}>
+                    <div className="campo">
+                      <label>Produto</label>
+                      <select value={prod.produto_id} onChange={(e) => selecionarProdutoNaAplicacao(indexAp, indexProd, e.target.value)}>
+                        <option value="">Selecione...</option>
+                        {produtos.map((p) => <option key={p.id} value={p.id}>{p.nome}</option>)}
+                      </select>
+                    </div>
+                    <div className="campo">
+                      <label>Quantidade</label>
+                      <div className="campo-composto">
+                        <input type="number" step="0.1" value={prod.quantidade} onChange={(e) => atualizarProdutoDaAplicacao(indexAp, indexProd, 'quantidade', e.target.value)} />
+                        <select value={prod.unidade} onChange={(e) => atualizarProdutoDaAplicacao(indexAp, indexProd, 'unidade', e.target.value)}>
+                          <option value="ml">ml</option>
+                          <option value="mg">mg</option>
+                          <option value="ui">UI</option>
+                          <option value="unidade">un.</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div className="campo">
+                      <label>Lote</label>
+                      <input value={prod.lote} onChange={(e) => atualizarProdutoDaAplicacao(indexAp, indexProd, 'lote', e.target.value)} />
+                    </div>
+                    <div className="campo">
+                      <label>Validade</label>
+                      <input type="date" value={prod.validade} onChange={(e) => atualizarProdutoDaAplicacao(indexAp, indexProd, 'validade', e.target.value)} />
+                    </div>
+                    <div className="campo">
+                      <label>Especificação</label>
+                      <input value={prod.especificacao} onChange={(e) => atualizarProdutoDaAplicacao(indexAp, indexProd, 'especificacao', e.target.value)} placeholder="Marca, concentração..." />
+                    </div>
+                    {ap.produtos.length > 1 && (
+                      <button type="button" className="remover-aplicacao" onClick={() => removerProdutoDaAplicacao(indexAp, indexProd)}>Remover este produto</button>
+                    )}
+                    {custoProdutoForm(prod, produtos) !== null && (
+                      <p className="custo-linha-form">Custo estimado: {formatarMoeda(custoProdutoForm(prod, produtos))}</p>
+                    )}
                   </div>
-                </div>
-                <div className="campo">
-                  <label>Lote</label>
-                  <input value={ap.lote} onChange={(e) => atualizarAplicacao(index, 'lote', e.target.value)} />
-                </div>
-                <div className="campo">
-                  <label>Validade</label>
-                  <input type="date" value={ap.validade} onChange={(e) => atualizarAplicacao(index, 'validade', e.target.value)} />
-                </div>
-                <div className="campo">
-                  <label>Especificação</label>
-                  <input value={ap.especificacao} onChange={(e) => atualizarAplicacao(index, 'especificacao', e.target.value)} placeholder="Marca, concentração..." />
-                </div>
+                ))}
+
+                <button type="button" className="botao-secundario" onClick={() => adicionarProdutoNaAplicacao(indexAp)} style={{ marginBottom: 4 }}>
+                  + Adicionar produto nesta aplicação
+                </button>
+
                 {form.aplicacoes.length > 1 && (
-                  <button type="button" className="remover-aplicacao" onClick={() => removerLinha(index)}>Remover esta aplicação</button>
-                )}
-                {custoAplicacaoForm(ap, produtos) !== null && (
-                  <p className="custo-linha-form">Custo estimado desta aplicação: {formatarMoeda(custoAplicacaoForm(ap, produtos))}</p>
+                  <button type="button" className="remover-aplicacao-inteira" onClick={() => removerAplicacao(indexAp)}>Remover esta aplicação inteira</button>
                 )}
               </div>
             ))}
 
-            <button type="button" className="botao-secundario" onClick={adicionarLinha} style={{ marginBottom: 20 }}>
-              + Adicionar outra aplicação
+            <button type="button" className="botao-secundario" onClick={adicionarAplicacao} style={{ marginBottom: 20 }}>
+              + Adicionar outra aplicação (novo procedimento)
             </button>
 
             <div className="campo">
@@ -411,7 +471,8 @@ export function FichaCapilar({ pacienteId, pacienteNome }) {
 
             {(() => {
               const custoProdutosForm = form.aplicacoes
-                .map((ap) => custoAplicacaoForm(ap, produtos))
+                .flatMap((ap) => ap.produtos)
+                .map((p) => custoProdutoForm(p, produtos))
                 .filter((c) => c !== null)
                 .reduce((soma, c) => soma + c, 0);
               const custoOperacional = Number(form.custo_operacional) || 0;
@@ -481,19 +542,23 @@ export function FichaCapilar({ pacienteId, pacienteNome }) {
                   {r.ficha_capilar_exames.map((e) => `${e.exames_itens?.nome}: ${e.valor || '—'}`).join(' · ')}
                 </p>
               )}
-              {(r.fichas_capilar_aplicacoes || []).map((a) => {
-                const custo = custoAplicacao(a);
-                return (
-                  <p key={a.id}>
-                    {a.procedimento}
-                    {a.produtos?.nome && ` · ${a.produtos.nome}`}
-                    {a.quantidade && ` · ${a.quantidade}${a.unidade || 'ml'}`}
-                    {a.lote && ` · Lote ${a.lote}`}
-                    {a.validade && ` · Val. ${new Date(a.validade).toLocaleDateString('pt-BR')}`}
-                    {custo !== null && ` · ${formatarMoeda(custo)}`}
-                  </p>
-                );
-              })}
+              {(r.capilar_aplicacoes || []).map((ap) => (
+                <div key={ap.id} style={{ marginTop: 6 }}>
+                  <p><strong>{ap.procedimento || 'Procedimento'}</strong></p>
+                  {(ap.capilar_aplicacao_produtos || []).map((prod) => {
+                    const custo = custoProduto(prod);
+                    return (
+                      <p key={prod.id} style={{ marginLeft: 14 }}>
+                        {prod.produtos?.nome}
+                        {prod.quantidade && ` · ${prod.quantidade}${prod.unidade || 'ml'}`}
+                        {prod.lote && ` · Lote ${prod.lote}`}
+                        {prod.validade && ` · Val. ${new Date(prod.validade).toLocaleDateString('pt-BR')}`}
+                        {custo !== null && ` · ${formatarMoeda(custo)}`}
+                      </p>
+                    );
+                  })}
+                </div>
+              ))}
               {(() => {
                 const custoProdutos = custoProdutosRegistro(r) || 0;
                 const custoOperacional = Number(r.custo_operacional) || 0;
