@@ -1,9 +1,10 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Users, ShieldCheck, LogOut, Calculator, Receipt, HandCoins, Wallet, LayoutDashboard } from 'lucide-react';
+import { Users, ShieldCheck, LogOut, Calculator, Receipt, HandCoins, Wallet, LayoutDashboard, CalendarDays } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 const ITENS_NAV = [
   { to: '/painel', label: 'Painel', Icone: LayoutDashboard, tela: null },
+  { to: '/agendamentos', label: 'Agendamentos', Icone: CalendarDays, tela: 'agendamentos' },
   { to: '/pacientes', label: 'Pacientes', Icone: Users, tela: 'pacientes' },
   { to: '/custo', label: 'Custo', Icone: Calculator, tela: 'custo' },
   { to: '/contas-pagar', label: 'Contas a Pagar', Icone: Receipt, tela: 'contas_pagar' },
