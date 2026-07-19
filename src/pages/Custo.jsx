@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { Layout } from '../components/Layout';
 
@@ -137,6 +137,13 @@ function AbaProdutos({ produtos, recarregar }) {
   const [mostrarForm, setMostrarForm] = useState(false);
   const [editandoId, setEditandoId] = useState(null);
   const [salvando, setSalvando] = useState(false);
+  const formRef = useRef(null);
+
+  useEffect(() => {
+    if (mostrarForm && formRef.current) {
+      formRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [mostrarForm]);
 
   function iniciarNovo() {
     setForm(PRODUTO_VAZIO);
@@ -215,7 +222,7 @@ function AbaProdutos({ produtos, recarregar }) {
       </div>
 
       {mostrarForm && (
-        <form className="ficha-form" onSubmit={salvar} style={{ marginBottom: 28 }}>
+        <form ref={formRef} className="ficha-form" onSubmit={salvar} style={{ marginBottom: 28 }}>
           <div className="row2 ficha-grid">
             <div className="campo">
               <label>Nome do produto</label>
@@ -322,8 +329,14 @@ function AbaComposicoes({ composicoes, servicos, custoItens, recarregar }) {
   const [salvando, setSalvando] = useState(false);
   const [sugestaoAberta, setSugestaoAberta] = useState(null);
   const [itensDisponiveis, setItensDisponiveis] = useState(custoItens);
+  const formRef = useRef(null);
 
   useEffect(() => { setItensDisponiveis(custoItens); }, [custoItens]);
+  useEffect(() => {
+    if (mostrarForm && formRef.current) {
+      formRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [mostrarForm]);
 
   function iniciarNovo() {
     setForm(COMPOSICAO_VAZIA);
@@ -420,7 +433,7 @@ function AbaComposicoes({ composicoes, servicos, custoItens, recarregar }) {
       </div>
 
       {mostrarForm && (
-        <form className="ficha-form" onSubmit={salvarComposicao} style={{ marginBottom: 28 }}>
+        <form ref={formRef} className="ficha-form" onSubmit={salvarComposicao} style={{ marginBottom: 28 }}>
           <div className="ficha-grid">
             <div className="campo">
               <label>Nome da composição</label>
