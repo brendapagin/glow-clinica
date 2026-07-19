@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { Layout } from '../components/Layout';
+import { useAuth } from '../context/AuthContext';
 
 function formatarMoeda(valor) {
   return Number(valor || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 2 });
@@ -16,6 +17,7 @@ function isoData(d) {
 
 export default function Painel() {
   const navigate = useNavigate();
+  const { perfil } = useAuth();
   const [carregando, setCarregando] = useState(true);
 
   const [nota, setNota] = useState('');
@@ -111,6 +113,7 @@ export default function Painel() {
   }
 
   const totalVenceHoje = contasVencendoHoje.reduce((s, c) => s + Number(c.valor || 0), 0);
+  const vejaFinanceiro = perfil?.papel === 'admin' || (perfil?.permissoes || []).some((p) => ['caixa', 'contas_pagar', 'contas_receber'].includes(p));
 
   return (
     <Layout titulo="Painel">
@@ -169,7 +172,7 @@ export default function Painel() {
         </div>
       )}
 
-      {!carregando && (
+      {!carregando && vejaFinanceiro && (
         <div className="painel-financeiro-rodape">
           <p className="dica-texto" style={{ marginBottom: 10 }}>Resumo financeiro</p>
           <div className="caixa-cartoes">
