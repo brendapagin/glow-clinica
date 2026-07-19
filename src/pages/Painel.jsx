@@ -124,7 +124,7 @@ export default function Painel() {
 
       {carregando ? <p>Carregando...</p> : (
         <div className="painel-duas-colunas">
-          <div className="ficha-secao" style={{ marginBottom: 0 }}>
+          <div className="ficha-secao painel-caixa" style={{ marginBottom: 0 }}>
             <div className="ficha-secao-topo">
               <h3>Pacientes de hoje</h3>
               <button className="botao-secundario" onClick={() => navigate('/agendamentos')}>Ver agenda completa</button>
@@ -142,7 +142,7 @@ export default function Painel() {
           </div>
 
           <div>
-            <div className="ficha-secao">
+            <div className="ficha-secao painel-caixa">
               <h3>Aniversariantes da semana</h3>
               {aniversariantes.length === 0 ? <p className="dica-texto">Nenhum aniversário esta semana.</p> : (
                 aniversariantes.map((a, i) => (
@@ -154,7 +154,7 @@ export default function Painel() {
               )}
             </div>
 
-            <div className="ficha-secao">
+            <div className="ficha-secao painel-caixa">
               <h3>Pacotes acabando</h3>
               {pacotesAcabando.length === 0 ? <p className="dica-texto">Nenhum pacote perto do fim.</p> : (
                 pacotesAcabando.map((p) => (
