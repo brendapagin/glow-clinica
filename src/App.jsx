@@ -6,6 +6,7 @@ import Pacientes from './pages/Pacientes';
 import PacienteFicha from './pages/PacienteFicha';
 import Custo from './pages/Custo';
 import Painel from './pages/Painel';
+import Agendamentos from './pages/Agendamentos';
 import ContasPagar from './pages/ContasPagar';
 import ContasReceber from './pages/ContasReceber';
 import Caixa from './pages/Caixa';
@@ -77,6 +78,14 @@ export default function App() {
         element={
           <Protegida>
             <Painel />
+          </Protegida>
+        }
+      />
+      <Route
+        path="/agendamentos"
+        element={
+          <Protegida telaRequerida="agendamentos">
+            <Agendamentos />
           </Protegida>
         }
       />

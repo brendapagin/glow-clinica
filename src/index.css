@@ -293,6 +293,28 @@ select.select-papel { font-family: var(--fonte-corpo); padding: 6px; border: 1px
   .painel-duas-colunas { grid-template-columns: 1fr; }
   .agenda-semana { grid-template-columns: repeat(7, minmax(80px, 1fr)); overflow-x: auto; }
 }
+
+/* ---------- Calendário mensal (página Agendamentos) ---------- */
+.calendario-cabecalho {
+  display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-bottom: 6px;
+  text-align: center; font-size: 12px; color: var(--terracota-escuro); text-transform: uppercase; letter-spacing: 1px;
+}
+.calendario-grade { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+.calendario-dia {
+  aspect-ratio: 1; background: var(--creme-claro); border: 1px solid var(--nude); border-radius: 8px;
+  cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 4px; padding: 6px; text-align: center;
+}
+.calendario-dia:disabled { background: transparent; border-color: transparent; cursor: default; }
+.calendario-dia:not(:disabled):hover { border-color: var(--dourado); }
+.calendario-dia-hoje { border: 2px solid var(--terracota); }
+.calendario-dia-numero { font-family: var(--fonte-display); font-size: 20px; color: var(--marrom-tinta); }
+.calendario-dia-badge { font-size: 10px; background: var(--terracota); color: var(--creme-claro); padding: 2px 6px; border-radius: 8px; }
+
+@media (max-width: 700px) {
+  .calendario-dia-numero { font-size: 15px; }
+  .calendario-dia-badge { font-size: 8px; padding: 1px 4px; }
+}
 .sugestoes-caixa {
   position: absolute; top: 100%; left: 0; right: 0; background: var(--creme-claro);
   border: 1px solid var(--nude); border-radius: 6px; z-index: 5; max-height: 160px;
