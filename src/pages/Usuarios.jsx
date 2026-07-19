@@ -5,9 +5,7 @@ import { Layout } from '../components/Layout';
 const PAPEIS = ['pendente', 'admin', 'recepcao', 'profissional', 'paciente'];
 const TELAS = [
   { valor: 'pacientes', label: 'Pacientes' },
-  { valor: 'servicos', label: 'Serviços' },
-  { valor: 'produtos', label: 'Produtos' },
-  { valor: 'custos', label: 'Custos' },
+  { valor: 'custo', label: 'Custo' },
   { valor: 'contas_pagar', label: 'Contas a Pagar' },
   { valor: 'contas_receber', label: 'Contas a Receber' },
   { valor: 'caixa', label: 'Caixa' },
