@@ -28,6 +28,12 @@ function gerarSlots() {
   return slots;
 }
 
+function horaSlotDe(dt) {
+  const h = dt.getHours();
+  const m = dt.getMinutes() >= 30 ? 30 : 0;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+}
+
 const FORM_VAZIO = { paciente_id: '', servico_id: '', data: '', hora: '', duracao_minutos: 30, status: 'confirmado', observacoes: '' };
 
 export default function Agendamentos() {
@@ -207,10 +213,7 @@ export default function Agendamentos() {
 
           <div className="agenda-dia">
             {slots.map((hora) => {
-              const agsDoSlot = agendamentosDoDia(diaSelecionado).filter((a) => {
-                const dt = new Date(a.data_hora);
-                return `${String(dt.getHours()).padStart(2, '0')}:${String(dt.getMinutes()).padStart(2, '0')}` === hora;
-              });
+              const agsDoSlot = agendamentosDoDia(diaSelecionado).filter((a) => horaSlotDe(new Date(a.data_hora)) === hora);
               return (
                 <div className="horario-linha" key={hora}>
                   <div className="hora-label">{hora}</div>
@@ -267,7 +270,7 @@ export default function Agendamentos() {
                 </div>
                 <div className="campo">
                   <label>Hora</label>
-                  <input type="time" required value={form.hora} onChange={(e) => setForm({ ...form, hora: e.target.value })} />
+                  <input type="time" step="1800" required value={form.hora} onChange={(e) => setForm({ ...form, hora: e.target.value })} />
                 </div>
                 <div className="campo">
                   <label>Duração (min)</label>
