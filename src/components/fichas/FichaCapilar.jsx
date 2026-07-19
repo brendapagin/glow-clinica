@@ -9,7 +9,7 @@ const APLICACAO_VAZIA = { procedimento: '', produtos: [{ ...PRODUTO_VAZIO }] };
 const VAZIO = {
   tipo_queda: '', classificacao: '', protocolo: '', data_sessao: '', observacoes: '',
   laudo: '', receituario: '', exames: [],
-  composicao_id: '', custo_operacional: '', valor_cobrado: '',
+  composicao_id: '', custo_operacional: '', valor_cobrado: '', pacote_id: '',
   aplicacoes: [{ ...APLICACAO_VAZIA }],
 };
 
@@ -56,6 +56,7 @@ export function FichaCapilar({ pacienteId, pacienteNome }) {
   const [registros, setRegistros] = useState([]);
   const [produtos, setProdutos] = useState([]);
   const [composicoes, setComposicoes] = useState([]);
+  const [pacotes, setPacotes] = useState([]);
   const [form, setForm] = useState(VAZIO);
   const [mostrarForm, setMostrarForm] = useState(false);
   const [editandoId, setEditandoId] = useState(null);
@@ -81,6 +82,14 @@ export function FichaCapilar({ pacienteId, pacienteNome }) {
       .eq('ativo', true)
       .order('nome');
     setComposicoes(composicoesData || []);
+
+    const { data: pacotesData } = await supabase
+      .from('pacotes')
+      .select('*')
+      .eq('paciente_id', pacienteId)
+      .eq('status', 'ativo')
+      .order('criado_em', { ascending: false });
+    setPacotes(pacotesData || []);
   }
 
   useEffect(() => { carregar(); }, [pacienteId]);
@@ -103,6 +112,7 @@ export function FichaCapilar({ pacienteId, pacienteNome }) {
       composicao_id: r.composicao_id || '',
       custo_operacional: r.custo_operacional ?? '',
       valor_cobrado: r.valor_cobrado ?? '',
+      pacote_id: r.pacote_id || '',
       exames: (r.ficha_capilar_exames || []).map((e) => ({
         exame_id: e.exame_id, nome: e.exames_itens?.nome || '', valor: e.valor || '',
       })),
@@ -278,6 +288,7 @@ export function FichaCapilar({ pacienteId, pacienteNome }) {
       composicao_id: form.composicao_id || null,
       custo_operacional: form.custo_operacional || null,
       valor_cobrado: form.valor_cobrado || null,
+      pacote_id: form.pacote_id || null,
     };
 
     let fichaId = editandoId;
@@ -327,7 +338,19 @@ export function FichaCapilar({ pacienteId, pacienteNome }) {
       }
     }
 
-    await sincronizarContaReceber(fichaId, Number(form.valor_cobrado) || 0, form.data_sessao);
+    if (form.pacote_id) {
+      // Atendimento coberto por um pacote já pago: não gera conta nova.
+      // Se por acaso já existia uma conta avulsa deste registro, remove.
+      await supabase.from('contas_receber').delete().eq('origem_tipo', 'capilar').eq('origem_id', fichaId);
+      if (!editandoId) {
+        const pacote = pacotes.find((p) => p.id === form.pacote_id);
+        if (pacote) {
+          await supabase.from('pacotes').update({ sessoes_utilizadas: (pacote.sessoes_utilizadas || 0) + 1 }).eq('id', pacote.id);
+        }
+      }
+    } else {
+      await sincronizarContaReceber(fichaId, Number(form.valor_cobrado) || 0, form.data_sessao);
+    }
 
     setSalvando(false);
     setForm(VAZIO);
@@ -458,6 +481,21 @@ export function FichaCapilar({ pacienteId, pacienteNome }) {
               <p className="dica-texto" style={{ marginTop: 6 }}>Escolher uma composição preenche o custo operacional abaixo automaticamente (você pode ajustar).</p>
             </div>
 
+            <div className="campo">
+              <label>Vincular a um pacote (opcional)</label>
+              <select value={form.pacote_id} onChange={(e) => setForm({ ...form, pacote_id: e.target.value })}>
+                <option value="">Nenhum — cobrança avulsa</option>
+                {pacotes.map((p) => (
+                  <option key={p.id} value={p.id}>{p.nome} ({p.sessoes_utilizadas}/{p.sessoes_totais} usadas)</option>
+                ))}
+              </select>
+              {form.pacote_id && (
+                <p className="dica-texto" style={{ marginTop: 6 }}>
+                  Esse atendimento vai descontar uma sessão do pacote e não vai gerar cobrança nova — já foi pago.
+                </p>
+              )}
+            </div>
+
             <div className="ficha-grid">
               <div className="campo">
                 <label>Custo operacional deste atendimento (R$)</label>
@@ -465,7 +503,7 @@ export function FichaCapilar({ pacienteId, pacienteNome }) {
               </div>
               <div className="campo">
                 <label>Valor cobrado da paciente (R$)</label>
-                <input type="number" step="0.01" value={form.valor_cobrado} onChange={(e) => setForm({ ...form, valor_cobrado: e.target.value })} />
+                <input type="number" step="0.01" value={form.valor_cobrado} onChange={(e) => setForm({ ...form, valor_cobrado: e.target.value })} disabled={!!form.pacote_id} placeholder={form.pacote_id ? 'Coberto pelo pacote' : ''} />
               </div>
             </div>
 

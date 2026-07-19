@@ -8,7 +8,7 @@ const APLICACAO_VAZIA = {
 };
 const FORM_VAZIO = {
   data_aplicacao: '', data_retorno: '', observacoes: '',
-  composicao_id: '', custo_operacional: '', valor_cobrado: '',
+  composicao_id: '', custo_operacional: '', valor_cobrado: '', pacote_id: '',
   laudo: '', receituario: '',
   aplicacoes: [{ ...APLICACAO_VAZIA }],
 };
@@ -50,6 +50,7 @@ export function FichaHarmonizacao({ pacienteId, pacienteNome }) {
   const [procedimentos, setProcedimentos] = useState([]);
   const [produtos, setProdutos] = useState([]);
   const [composicoes, setComposicoes] = useState([]);
+  const [pacotes, setPacotes] = useState([]);
   const [form, setForm] = useState(FORM_VAZIO);
   const [mostrarForm, setMostrarForm] = useState(false);
   const [editandoId, setEditandoId] = useState(null);
@@ -74,6 +75,14 @@ export function FichaHarmonizacao({ pacienteId, pacienteNome }) {
       .eq('ativo', true)
       .order('nome');
     setComposicoes(composicoesData || []);
+
+    const { data: pacotesData } = await supabase
+      .from('pacotes')
+      .select('*')
+      .eq('paciente_id', pacienteId)
+      .eq('status', 'ativo')
+      .order('criado_em', { ascending: false });
+    setPacotes(pacotesData || []);
   }
 
   useEffect(() => { carregar(); }, [pacienteId]);
@@ -121,6 +130,7 @@ export function FichaHarmonizacao({ pacienteId, pacienteNome }) {
       composicao_id: proc.composicao_id || '',
       custo_operacional: proc.custo_operacional ?? '',
       valor_cobrado: proc.valor_cobrado ?? '',
+      pacote_id: proc.pacote_id || '',
       laudo: proc.laudo || '',
       receituario: proc.receituario || '',
       aplicacoes: (proc.harmonizacao_aplicacoes || []).length > 0
@@ -233,6 +243,7 @@ export function FichaHarmonizacao({ pacienteId, pacienteNome }) {
       composicao_id: form.composicao_id || null,
       custo_operacional: form.custo_operacional || null,
       valor_cobrado: form.valor_cobrado || null,
+      pacote_id: form.pacote_id || null,
       laudo: form.laudo,
       receituario: form.receituario,
     };
@@ -267,7 +278,17 @@ export function FichaHarmonizacao({ pacienteId, pacienteNome }) {
       if (error) alert('Erro ao salvar aplicações: ' + error.message);
     }
 
-    await sincronizarContaReceber(procedimentoId, Number(form.valor_cobrado) || 0, form.data_aplicacao);
+    if (form.pacote_id) {
+      await supabase.from('contas_receber').delete().eq('origem_tipo', 'harmonizacao').eq('origem_id', procedimentoId);
+      if (!editandoId) {
+        const pacote = pacotes.find((p) => p.id === form.pacote_id);
+        if (pacote) {
+          await supabase.from('pacotes').update({ sessoes_utilizadas: (pacote.sessoes_utilizadas || 0) + 1 }).eq('id', pacote.id);
+        }
+      }
+    } else {
+      await sincronizarContaReceber(procedimentoId, Number(form.valor_cobrado) || 0, form.data_aplicacao);
+    }
 
     setSalvando(false);
     setMostrarForm(false);
@@ -360,6 +381,21 @@ export function FichaHarmonizacao({ pacienteId, pacienteNome }) {
               <p className="dica-texto" style={{ marginTop: 6 }}>Escolher uma composição preenche o custo operacional abaixo automaticamente (você pode ajustar).</p>
             </div>
 
+            <div className="campo">
+              <label>Vincular a um pacote (opcional)</label>
+              <select value={form.pacote_id} onChange={(e) => setForm({ ...form, pacote_id: e.target.value })}>
+                <option value="">Nenhum — cobrança avulsa</option>
+                {pacotes.map((p) => (
+                  <option key={p.id} value={p.id}>{p.nome} ({p.sessoes_utilizadas}/{p.sessoes_totais} usadas)</option>
+                ))}
+              </select>
+              {form.pacote_id && (
+                <p className="dica-texto" style={{ marginTop: 6 }}>
+                  Esse atendimento vai descontar uma sessão do pacote e não vai gerar cobrança nova — já foi pago.
+                </p>
+              )}
+            </div>
+
             <div className="ficha-grid">
               <div className="campo">
                 <label>Custo operacional deste atendimento (R$)</label>
@@ -367,7 +403,7 @@ export function FichaHarmonizacao({ pacienteId, pacienteNome }) {
               </div>
               <div className="campo">
                 <label>Valor cobrado da paciente (R$)</label>
-                <input type="number" step="0.01" value={form.valor_cobrado} onChange={(e) => setForm({ ...form, valor_cobrado: e.target.value })} />
+                <input type="number" step="0.01" value={form.valor_cobrado} onChange={(e) => setForm({ ...form, valor_cobrado: e.target.value })} disabled={!!form.pacote_id} placeholder={form.pacote_id ? 'Coberto pelo pacote' : ''} />
               </div>
             </div>
 
