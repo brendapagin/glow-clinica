@@ -5,6 +5,7 @@ import { Layout } from '../components/Layout';
 import { FichaCapilar } from '../components/fichas/FichaCapilar';
 import { FichaHarmonizacao } from '../components/fichas/FichaHarmonizacao';
 import { FichaGenerica } from '../components/fichas/FichaGenerica';
+import { PacotesPaciente } from '../components/PacotesPaciente';
 
 function renderizarFicha(slug, nome, pacienteId, pacienteNome) {
   if (slug === 'capilar') return <FichaCapilar pacienteId={pacienteId} pacienteNome={pacienteNome} />;
@@ -71,6 +72,8 @@ export default function PacienteFicha() {
         <h2>{paciente.nome}</h2>
         <p>{[paciente.telefone, paciente.email, paciente.cpf].filter(Boolean).join(' · ') || 'Sem contato cadastrado'}</p>
       </div>
+
+      <PacotesPaciente pacienteId={id} />
 
       <div className="abas-servico">
         {servicosAtivos.map((s) => (
