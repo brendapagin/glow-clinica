@@ -173,34 +173,23 @@ export default function Painel() {
         <div className="painel-financeiro-rodape">
           <p className="dica-texto" style={{ marginBottom: 10 }}>Resumo financeiro</p>
           <div className="caixa-cartoes">
-            <div className="caixa-cartao">
+            <button className="caixa-cartao caixa-cartao-clicavel" onClick={() => navigate('/caixa')}>
               <span className="caixa-cartao-label">Saldo em caixa</span>
               <strong className="caixa-cartao-valor">{formatarMoeda(saldoCaixa)}</strong>
-            </div>
-            <div className="caixa-cartao">
+            </button>
+            <button className="caixa-cartao caixa-cartao-clicavel" onClick={() => navigate('/contas-receber')}>
               <span className="caixa-cartao-label">A receber</span>
               <strong className="caixa-cartao-valor caixa-positivo">{formatarMoeda(aReceber)}</strong>
-            </div>
-            <div className="caixa-cartao">
+            </button>
+            <button className="caixa-cartao caixa-cartao-clicavel" onClick={() => navigate('/contas-pagar')}>
               <span className="caixa-cartao-label">A pagar</span>
               <strong className="caixa-cartao-valor caixa-negativo">{formatarMoeda(aPagar)}</strong>
-            </div>
-            <div className="caixa-cartao">
+            </button>
+            <button className="caixa-cartao caixa-cartao-clicavel" onClick={() => navigate('/contas-pagar')}>
               <span className="caixa-cartao-label">Vence hoje</span>
               <strong className="caixa-cartao-valor caixa-negativo">{formatarMoeda(totalVenceHoje)}</strong>
-            </div>
+            </button>
           </div>
-
-          {contasVencendoHoje.length > 0 && (
-            <div style={{ marginTop: 12 }}>
-              {contasVencendoHoje.map((c) => (
-                <p key={c.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, margin: '4px 0' }}>
-                  <span>{c.descricao}</span>
-                  <span className="caixa-negativo">{formatarMoeda(c.valor)}</span>
-                </p>
-              ))}
-            </div>
-          )}
         </div>
       )}
     </Layout>
