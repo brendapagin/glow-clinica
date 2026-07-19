@@ -66,6 +66,14 @@ export function PacotesPaciente({ pacienteId }) {
     carregar();
   }
 
+  async function excluir(pacote) {
+    if (!confirm(`Excluir o pacote "${pacote.nome}"? Isso também remove a conta a receber gerada por ele, se ainda estiver pendente.`)) return;
+    await supabase.from('contas_receber').delete().eq('origem_tipo', 'pacote').eq('origem_id', pacote.id);
+    const { error } = await supabase.from('pacotes').delete().eq('id', pacote.id);
+    if (error) { alert('Erro ao excluir: ' + error.message); return; }
+    carregar();
+  }
+
   return (
     <div className="ficha-secao" style={{ marginBottom: 32 }}>
       <div className="ficha-secao-topo">
@@ -121,12 +129,15 @@ export function PacotesPaciente({ pacienteId }) {
                 </div>
               </div>
               <p>{p.sessoes_utilizadas} de {p.sessoes_totais} sessões utilizadas · Valor pago: {formatarMoeda(p.valor_total)}</p>
-              {p.status === 'ativo' && (
-                <div className="registro-acoes" style={{ marginTop: 6 }}>
-                  <button onClick={() => mudarStatus(p, 'concluido')}>Marcar como concluído</button>
-                  <button onClick={() => mudarStatus(p, 'cancelado')}>Cancelar</button>
-                </div>
-              )}
+              <div className="registro-acoes" style={{ marginTop: 6 }}>
+                {p.status === 'ativo' && (
+                  <>
+                    <button onClick={() => mudarStatus(p, 'concluido')}>Marcar como concluído</button>
+                    <button onClick={() => mudarStatus(p, 'cancelado')}>Cancelar</button>
+                  </>
+                )}
+                <button onClick={() => excluir(p)}>Excluir</button>
+              </div>
             </div>
           ))}
         </div>
