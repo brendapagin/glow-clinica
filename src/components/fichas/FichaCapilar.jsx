@@ -434,6 +434,7 @@ export function FichaCapilar({ pacienteId, pacienteNome }) {
                           <option value="mg">mg</option>
                           <option value="ui">UI</option>
                           <option value="unidade">un.</option>
+                          <option value="kit">kit</option>
                         </select>
                       </div>
                     </div>
