@@ -14,6 +14,11 @@ export default function Pacientes() {
   const [form, setForm] = useState(VAZIO);
   const [salvando, setSalvando] = useState(false);
 
+  const [pacienteEscolhido, setPacienteEscolhido] = useState(null);
+  const [pacienteEditando, setPacienteEditando] = useState(null);
+  const [formEdicao, setFormEdicao] = useState(VAZIO);
+  const [salvandoEdicao, setSalvandoEdicao] = useState(false);
+
   async function carregar() {
     setCarregando(true);
     const { data } = await supabase.from('pacientes').select('*').order('criado_em', { ascending: false });
@@ -33,6 +38,33 @@ export default function Pacientes() {
     setSalvando(false);
     if (error) { alert('Erro ao cadastrar: ' + error.message); return; }
     navigate(`/pacientes/${data.id}`);
+  }
+
+  function abrirEdicao(paciente) {
+    setFormEdicao({
+      nome: paciente.nome || '',
+      cpf: paciente.cpf || '',
+      telefone: paciente.telefone || '',
+      email: paciente.email || '',
+      data_nascimento: paciente.data_nascimento || '',
+      genero: paciente.genero || '',
+      endereco: paciente.endereco || '',
+    });
+    setPacienteEditando(paciente);
+    setPacienteEscolhido(null);
+  }
+
+  async function salvarEdicao(e) {
+    e.preventDefault();
+    setSalvandoEdicao(true);
+    const { error } = await supabase.from('pacientes').update({
+      ...formEdicao,
+      data_nascimento: formEdicao.data_nascimento || null,
+    }).eq('id', pacienteEditando.id);
+    setSalvandoEdicao(false);
+    if (error) { alert('Erro ao salvar: ' + error.message); return; }
+    setPacienteEditando(null);
+    carregar();
   }
 
   const filtrados = pacientes.filter((p) =>
@@ -102,7 +134,7 @@ export default function Pacientes() {
           </thead>
           <tbody>
             {filtrados.map((p) => (
-              <tr key={p.id} className="linha-clicavel" onClick={() => navigate(`/pacientes/${p.id}`)}>
+              <tr key={p.id} className="linha-clicavel" onClick={() => setPacienteEscolhido(p)}>
                 <td>{p.nome}</td>
                 <td>{p.telefone || '—'}</td>
                 <td>{p.email || '—'}</td>
@@ -115,6 +147,70 @@ export default function Pacientes() {
             )}
           </tbody>
         </table>
+      )}
+
+      {pacienteEscolhido && (
+        <div className="modal-fundo" onClick={() => setPacienteEscolhido(null)}>
+          <div className="modal-caixa" style={{ maxWidth: 380 }} onClick={(e) => e.stopPropagation()}>
+            <div className="modal-topo">
+              <h3>{pacienteEscolhido.nome}</h3>
+              <button className="modal-fechar" onClick={() => setPacienteEscolhido(null)}>×</button>
+            </div>
+            <div className="ficha-form-acoes" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 12 }}>
+              <button className="botao" onClick={() => navigate(`/pacientes/${pacienteEscolhido.id}`)}>Iniciar atendimento</button>
+              <button className="botao-secundario" onClick={() => abrirEdicao(pacienteEscolhido)}>Editar dados do paciente</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {pacienteEditando && (
+        <div className="modal-fundo" onClick={() => setPacienteEditando(null)}>
+          <div className="modal-caixa" style={{ maxWidth: 560 }} onClick={(e) => e.stopPropagation()}>
+            <div className="modal-topo">
+              <h3>Editar dados do paciente</h3>
+              <button className="modal-fechar" onClick={() => setPacienteEditando(null)}>×</button>
+            </div>
+            <form onSubmit={salvarEdicao}>
+              <div className="ficha-grid">
+                <div className="campo">
+                  <label>Nome completo</label>
+                  <input required value={formEdicao.nome} onChange={(e) => setFormEdicao({ ...formEdicao, nome: e.target.value })} />
+                </div>
+                <div className="campo">
+                  <label>CPF</label>
+                  <input value={formEdicao.cpf} onChange={(e) => setFormEdicao({ ...formEdicao, cpf: e.target.value })} />
+                </div>
+                <div className="campo">
+                  <label>Telefone</label>
+                  <input value={formEdicao.telefone} onChange={(e) => setFormEdicao({ ...formEdicao, telefone: e.target.value })} />
+                </div>
+                <div className="campo">
+                  <label>E-mail</label>
+                  <input type="email" value={formEdicao.email} onChange={(e) => setFormEdicao({ ...formEdicao, email: e.target.value })} />
+                </div>
+                <div className="campo">
+                  <label>Data de nascimento</label>
+                  <input type="date" value={formEdicao.data_nascimento} onChange={(e) => setFormEdicao({ ...formEdicao, data_nascimento: e.target.value })} />
+                </div>
+                <div className="campo">
+                  <label>Gênero</label>
+                  <input value={formEdicao.genero} onChange={(e) => setFormEdicao({ ...formEdicao, genero: e.target.value })} />
+                </div>
+              </div>
+              <div className="campo">
+                <label>Endereço</label>
+                <input value={formEdicao.endereco} onChange={(e) => setFormEdicao({ ...formEdicao, endereco: e.target.value })} />
+              </div>
+              <div className="ficha-form-acoes">
+                <button type="submit" className="botao" disabled={salvandoEdicao} style={{ maxWidth: 220 }}>
+                  {salvandoEdicao ? 'Salvando...' : 'Salvar alterações'}
+                </button>
+                <button type="button" className="link-secundario" onClick={() => setPacienteEditando(null)}>Cancelar</button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
     </Layout>
   );
