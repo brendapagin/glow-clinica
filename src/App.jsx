@@ -5,6 +5,7 @@ import Usuarios from './pages/Usuarios';
 import Pacientes from './pages/Pacientes';
 import PacienteFicha from './pages/PacienteFicha';
 import Custo from './pages/Custo';
+import Painel from './pages/Painel';
 import ContasPagar from './pages/ContasPagar';
 import ContasReceber from './pages/ContasReceber';
 import Caixa from './pages/Caixa';
@@ -71,7 +72,15 @@ export default function App() {
           </Protegida>
         }
       />
-      <Route path="/" element={<Navigate to="/pacientes" replace />} />
+      <Route
+        path="/painel"
+        element={
+          <Protegida>
+            <Painel />
+          </Protegida>
+        }
+      />
+      <Route path="/" element={<Navigate to="/painel" replace />} />
       <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
   );

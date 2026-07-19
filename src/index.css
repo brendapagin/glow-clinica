@@ -239,6 +239,60 @@ select.select-papel { font-family: var(--fonte-corpo); padding: 6px; border: 1px
 .row2 { display: grid; grid-template-columns: 1fr 1fr; }
 
 .autocomplete-wrap { position: relative; }
+
+/* ---------- Painel (página única) ---------- */
+.painel-duas-colunas { display: grid; grid-template-columns: 1.4fr 1fr; gap: 20px; align-items: start; margin-bottom: 28px; }
+.painel-financeiro-rodape { border-top: 1px dashed var(--nude); padding-top: 20px; margin-top: 8px; }
+
+.agenda-navegacao { display: flex; justify-content: space-between; align-items: center; margin: 14px 0 16px; font-size: 14px; }
+.agenda-navegacao strong { text-transform: capitalize; font-weight: 500; }
+
+.agenda-dia { max-height: 480px; overflow-y: auto; border-top: 1px solid var(--nude); }
+.horario-linha { display: grid; grid-template-columns: 56px 1fr; border-bottom: 1px solid var(--nude); min-height: 46px; }
+.hora-label { font-size: 12px; color: var(--terracota-escuro); padding: 8px 8px 0 0; text-align: right; }
+.slot-conteudo { padding: 4px 0; }
+.bloco-agendamento {
+  background: var(--nude); border-left: 3px solid var(--terracota); border-radius: 4px;
+  padding: 6px 10px; cursor: pointer; display: flex; flex-direction: column; gap: 1px;
+}
+.bloco-agendamento .bloco-nome { font-size: 13px; font-weight: 500; color: var(--marrom-tinta); }
+.bloco-agendamento .bloco-servico { font-size: 11px; color: var(--terracota-escuro); }
+.bloco-agendamento.status-realizado { border-left-color: var(--sucesso); }
+.bloco-agendamento.status-cancelado { border-left-color: var(--erro); opacity: 0.6; }
+.bloco-agendamento.status-faltou { border-left-color: var(--erro); }
+.slot-vazio { min-height: 34px; border-radius: 4px; cursor: pointer; }
+.slot-vazio:hover { background: var(--creme); }
+
+.agenda-semana { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; }
+.agenda-semana-coluna { min-height: 120px; }
+.agenda-semana-cabecalho {
+  width: 100%; background: var(--nude); border: none; border-radius: 6px; padding: 6px;
+  font-size: 12px; text-transform: capitalize; cursor: pointer; margin-bottom: 6px; color: var(--marrom-tinta);
+}
+.bloco-agendamento-mini {
+  background: var(--creme); border-left: 2px solid var(--terracota); border-radius: 3px;
+  padding: 4px 6px; font-size: 11px; margin-bottom: 4px; cursor: pointer; color: var(--marrom-tinta);
+}
+.bloco-agendamento-mini.status-realizado { border-left-color: var(--sucesso); }
+.bloco-agendamento-mini.status-cancelado { border-left-color: var(--erro); opacity: 0.6; }
+
+.agenda-mes { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.agenda-mes-dia {
+  aspect-ratio: 1; background: var(--creme); border: none; border-radius: 6px; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  font-size: 13px; color: var(--marrom-tinta); position: relative;
+}
+.agenda-mes-dia:disabled { background: transparent; cursor: default; }
+.agenda-mes-dia:not(:disabled):hover { background: var(--nude); }
+.agenda-mes-badge {
+  position: absolute; bottom: 4px; background: var(--terracota); color: var(--creme-claro);
+  font-size: 9px; padding: 1px 5px; border-radius: 8px;
+}
+
+@media (max-width: 900px) {
+  .painel-duas-colunas { grid-template-columns: 1fr; }
+  .agenda-semana { grid-template-columns: repeat(7, minmax(80px, 1fr)); overflow-x: auto; }
+}
 .sugestoes-caixa {
   position: absolute; top: 100%; left: 0; right: 0; background: var(--creme-claro);
   border: 1px solid var(--nude); border-radius: 6px; z-index: 5; max-height: 160px;
