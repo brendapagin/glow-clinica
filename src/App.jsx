@@ -36,7 +36,7 @@ export default function App() {
       <Route
         path="/pacientes/:id"
         element={
-          <Protegida telaRequerida="pacientes">
+          <Protegida telaRequerida="atendimento">
             <PacienteFicha />
           </Protegida>
         }
